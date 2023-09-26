@@ -27,15 +27,13 @@ topology_labels = {
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
-    await asyncio.gather(
-        # Principal
-        ops_test.model.deploy(
-            principal.charm, application_name=principal.name, num_units=2, series="jammy"
-        ),
-        # Subordinate
-        ops_test.model.deploy(
-            grafana_agent_charm, application_name=agent.name, num_units=0, series="jammy"
-        ),
+    # Principal
+    await ops_test.model.deploy(
+        principal.charm, application_name=principal.name, num_units=2, series="jammy"
+    )
+    # Subordinate
+    await ops_test.model.deploy(
+        grafana_agent_charm, application_name=agent.name, num_units=0, series="jammy"
     )
 
     # grafana agent is in 'unknown' status until related, so wait only for the principal
