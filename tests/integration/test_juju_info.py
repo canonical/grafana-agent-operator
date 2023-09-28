@@ -36,7 +36,13 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
         grafana_agent_charm, application_name=agent.name, num_units=0, series="jammy"
     )
 
-    # grafana agent is in 'unknown' status until related, so wait only for the principal
+    # Placeholder for o11y relations (otherwise grafana agent charm is in blocked status)
+    await ops_test.model.deploy(
+        "grafana-cloud-integrator", application_name="gci", num_units=1, series="focal"
+    )
+
+    # grafana agent is in 'unknown' status until related, and grafana-cloud-integrator is in
+    # 'blocked' until grafana cloud credentials are provided, so wait only for the principal.
     await ops_test.model.wait_for_idle(apps=[principal.name])
 
 
@@ -44,7 +50,8 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
 async def test_service(ops_test: OpsTest):
     # WHEN the charm is related to a principal over `juju-info`
     await ops_test.model.add_relation("agent:juju-info", principal.name)
-    await ops_test.model.wait_for_idle(status="active")
+    await ops_test.model.add_relation("agent:grafana-cloud-config", "gci")
+    await ops_test.model.wait_for_idle(apps=[principal.name, agent.name], status="active")
 
     # THEN all units of the principal have the charm in 'enabled/active' state
     # $ juju ssh agent/0 snap services grafana-agent
