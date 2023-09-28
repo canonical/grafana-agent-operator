@@ -38,7 +38,11 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
 
     # Placeholder for o11y relations (otherwise grafana agent charm is in blocked status)
     await ops_test.model.deploy(
-        "grafana-cloud-integrator", application_name="gci", num_units=1, series="focal"
+        "grafana-cloud-integrator",
+        application_name="gci",
+        num_units=1,
+        series="focal",
+        channel="edge",
     )
 
     # grafana agent is in 'unknown' status until related, and grafana-cloud-integrator is in
