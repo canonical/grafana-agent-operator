@@ -25,6 +25,15 @@ topology_labels = {
 }
 
 
+async def ssh_units(ops_test, app_name: str, command: str) -> List[str]:
+    """Run a command in all units of the given apps and return all the outputs."""
+    units: list = ops_test.model.applications[app_name].units
+    try:
+        return [await unit.ssh(command) for unit in units]
+    except JujuError as e:
+        pytest.fail(f"Failed to run ssh command '{command}' in {app_name}: {e.message}")
+
+
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
     # Principal
@@ -61,14 +70,9 @@ async def test_service(ops_test: OpsTest):
     # $ juju ssh agent/0 snap services grafana-agent
     # Service                      Startup  Current  Notes
     # grafana-agent.grafana-agent  enabled  active   -
-    machines: List[str] = await ops_test.model.get_machines()
-    for machine_id in machines:
-        try:
-            await ops_test.model.machines[machine_id].ssh(
-                "snap services grafana-agent | grep 'enabled.*active'"
-            )
-        except JujuError as e:
-            pytest.fail(f"snap is not enabled/active in unit {machine_id}: {e.message}")
+    await ssh_units(
+        ops_test, principal.name, "snap services grafana-agent | grep 'enabled.*active'"
+    )
 
 
 @pytest.mark.abort_on_fail
@@ -76,18 +80,13 @@ async def test_metrics(ops_test: OpsTest):
     # Wait the scrape interval to make sure all "state" keys turned from unknown to up (or down).
     await asyncio.sleep(60)
 
-    machines: List[str] = await ops_test.model.get_machines()
+    unit_targets = await ssh_units(
+        ops_test, principal.name, "curl localhost:12345/agent/api/v1/metrics/targets"
+    )
+    unit_targets = [json.loads(itm)["data"] for itm in unit_targets]
 
-    # AND juju topology labels are present for all targets and all targets are 'up'
-    machine_targets = {
-        machine_id: await ops_test.model.machines[machine_id].ssh(
-            "curl localhost:12345/agent/api/v1/metrics/targets"
-        )
-        for machine_id in machines
-    }
-    machine_targets = {k: json.loads(v)["data"] for k, v in machine_targets.items()}
-    assert len(machine_targets) > 1  # Self-scrape + node-exporter
-    for targets in machine_targets.values():
+    assert len(unit_targets) > 1  # Self-scrape + node-exporter
+    for targets in unit_targets:
         for target in targets:
             target_labels = target["labels"].keys()
             assert topology_labels.issubset(target_labels)
@@ -130,18 +129,12 @@ async def test_metrics(ops_test: OpsTest):
 
 @pytest.mark.xfail  # agent return an empty reply (bug)
 async def test_logs(ops_test: OpsTest):
-    machines: List[str] = await ops_test.model.get_machines()
-
-    # AND juju topology labels are present for all targets
-    machine_targets = {
-        machine_id: await ops_test.model.machines[machine_id].ssh(
-            "curl localhost:12345/agent/api/v1/logs/targets"
-        )
-        for machine_id in machines
-    }
-    machine_targets = {k: json.loads(v)["data"] for k, v in machine_targets.items()}
-    assert len(machine_targets) > 1  # Self-scrape + node-exporter
-    for targets in machine_targets.values():
+    unit_targets = await ssh_units(
+        ops_test, principal.name, "curl localhost:12345/agent/api/v1/logs/targets"
+    )
+    unit_targets = [json.loads(itm)["data"] for itm in unit_targets]
+    assert len(unit_targets) > 1  # Self-scrape + node-exporter
+    for targets in unit_targets:
         for target in targets:
             target_labels = target["labels"].keys()
             assert topology_labels.issubset(target_labels)
