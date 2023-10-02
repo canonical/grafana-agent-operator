@@ -1,14 +1,14 @@
-# Grafana Agent Charmed Operator for Kubernetes
+# Grafana Agent Charmed Operator for Machines (LXD, MaaS, et al)
 
 
-[![Test Suite](https://github.com/canonical/grafana-agent-k8s-operator/actions/workflows/release-edge.yaml/badge.svg)](https://github.com/canonical/grafana-agent-k8s-operator/actions/workflows/release-edge.yaml)
+[![Test Suite](https://github.com/canonical/grafana-agent-operator/actions/workflows/release-edge.yaml/badge.svg)](https://github.com/canonical/grafana-agent-operator/actions/workflows/release-edge.yaml)
 
 ## Description
 
 [Grafana Agent](https://github.com/grafana/agent) is a telemetry collector for sending metrics,
 logs, and trace data to the opinionated Grafana observability stack.
 
-The Grafana Agent Charmed Operator deploys Grafana Agent in Kubernetes using [Juju](https://juju.is)
+The Grafana Agent Charmed Operator deploys Grafana Agent in machines using [Juju](https://juju.is)
 and the [Charmed Operator Lifecycle Manager (OLM)](https://juju.is/docs/olm).
 
 As a single entry point to the [Canonical Observability Stack](https://charmhub.io/cos-lite), the Grafana Agent charm
@@ -22,7 +22,7 @@ brings several conveniences when deployed inside a monitored cluster:
   `loki_push_api` and `prometheus_remote_write`), which simplifies firewall
   configuration, as only outgoing connections would need to be established.
 
-See [deployment scenarios](https://github.com/canonical/grafana-agent-k8s-operator/blob/main/INTEGRATING.md#deployment-scenarios)
+See [deployment scenarios](https://github.com/canonical/grafana-agent-operator/blob/main/INTEGRATING.md#deployment-scenarios)
 for further detail.
 
 ## Usage
@@ -36,7 +36,7 @@ juju add-model cos
 The Grafana agent may be deployed using the juju command line:
 
 ```bash
-juju deploy grafana-agent-k8s --trust
+juju deploy grafana-agent --trust
 ```
 
 If required, you can remove the deployment completely:
@@ -67,7 +67,7 @@ provides:
     interface: loki_push_api
 ```
 
-More detailed information about these relations can be found in [Charmhub docs page](https://charmhub.io/grafana-agent-k8s/docs/relations).
+More detailed information about these relations can be found in [Charmhub docs page](https://charmhub.io/grafana-agent/docs/relations).
 
 
 ## OCI Images
