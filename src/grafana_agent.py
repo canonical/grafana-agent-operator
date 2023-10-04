@@ -593,28 +593,26 @@ class GrafanaAgentCharm(CharmBase):
         prometheus_endpoints: List[Dict[str, Any]] = self._remote_write.endpoints
 
         if self._cloud.prometheus_ready:
-            prometheus_endpoints.append(
-                {
-                    "url": self._cloud.prometheus_url,
-                    "basic_auth": {
-                        "username": self._cloud.credentials.username,
-                        "password": self._cloud.credentials.password,
-                    },
+            prometheus_endpoint = {}
+            prometheus_endpoint["url"] = self._cloud.prometheus_url
+            if self._cloud.credentials:
+                prometheus_endpoint["basic_auth"] = {
+                    "username": self._cloud.credentials.username,
+                    "password": self._cloud.credentials.password,
                 }
-            )
+            prometheus_endpoints.append(prometheus_endpoint)
 
         loki_endpoints = self._loki_consumer.loki_endpoints
 
         if self._cloud.loki_ready:
-            loki_endpoints.append(
-                {
-                    "url": self._cloud.loki_url,
-                    "basic_auth": {
-                        "username": self._cloud.credentials.username,
-                        "password": self._cloud.credentials.password,
-                    },
+            loki_endpoint = {}
+            loki_endpoint["url"] = self._cloud.loki_url
+            if self._cloud.credentials:
+                loki_endpoint["basic_auth"] = {
+                    "username": self._cloud.credentials.username,
+                    "password": self._cloud.credentials.password,
                 }
-            )
+            loki_endpoints.append(loki_endpoint)
 
         for endpoint in prometheus_endpoints + loki_endpoints:
             endpoint["tls_config"] = {
