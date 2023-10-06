@@ -40,9 +40,16 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
     await ops_test.model.deploy(
         principal.charm, application_name=principal.name, num_units=2, series="jammy"
     )
+
+    # Workaround: `charmcraft pack` produces two files, but `ops_test.build_charm` returns the
+    # first one. Since primary is jammy, we know we need to deploy the jammy grafana agent charm,
+    # otherwise we'd get an error such as:
+    #   ImportError: libssl.so.1.1: cannot open shared object file: No such file or directory
+    jammy_charm_path = grafana_agent_charm.parent / "grafana-agent_ubuntu-22.04-amd64.charm"
+
     # Subordinate
     await ops_test.model.deploy(
-        grafana_agent_charm, application_name=agent.name, num_units=0, series="jammy"
+        jammy_charm_path, application_name=agent.name, num_units=0, series="jammy"
     )
 
     # Placeholder for o11y relations (otherwise grafana agent charm is in blocked status)
