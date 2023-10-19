@@ -1,7 +1,7 @@
 # Grafana Agent Charmed Operator for Machines (LXD, MaaS, et al)
 
 
-[![Test Suite](https://github.com/canonical/grafana-agent-operator/actions/workflows/release-edge.yaml/badge.svg)](https://github.com/canonical/grafana-agent-operator/actions/workflows/release-edge.yaml)
+[![Release Charm to Edge and Publish Libraries](https://github.com/canonical/grafana-agent-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/grafana-agent-operator/actions/workflows/release.yaml)
 
 ## Description
 

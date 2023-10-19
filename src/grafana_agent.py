@@ -593,8 +593,7 @@ class GrafanaAgentCharm(CharmBase):
         prometheus_endpoints: List[Dict[str, Any]] = self._remote_write.endpoints
 
         if self._cloud.prometheus_ready:
-            prometheus_endpoint = {}
-            prometheus_endpoint["url"] = self._cloud.prometheus_url
+            prometheus_endpoint = {"url": self._cloud.prometheus_url}
             if self._cloud.credentials:
                 prometheus_endpoint["basic_auth"] = {
                     "username": self._cloud.credentials.username,
@@ -605,8 +604,12 @@ class GrafanaAgentCharm(CharmBase):
         loki_endpoints = self._loki_consumer.loki_endpoints
 
         if self._cloud.loki_ready:
-            loki_endpoint = {}
-            loki_endpoint["url"] = self._cloud.loki_url
+            loki_endpoint = {
+              "url": self._cloud.loki_url,
+              "headers": {
+                  "Content-Encoding": "snappy",
+              },
+            }
             if self._cloud.credentials:
                 loki_endpoint["basic_auth"] = {
                     "username": self._cloud.credentials.username,
