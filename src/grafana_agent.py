@@ -605,10 +605,10 @@ class GrafanaAgentCharm(CharmBase):
 
         if self._cloud.loki_ready:
             loki_endpoint = {
-              "url": self._cloud.loki_url,
-              "headers": {
-                  "Content-Encoding": "snappy",
-              },
+                "url": self._cloud.loki_url,
+                "headers": {
+                    "Content-Encoding": "snappy",
+                },
             }
             if self._cloud.credentials:
                 loki_endpoint["basic_auth"] = {
