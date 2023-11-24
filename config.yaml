@@ -10,7 +10,7 @@ options:
       Loki).
     type: boolean
     default: false
-  scrape-timeout-sec:
-    description: The global metrics scrape timeout (seconds).
-    type: int
-    default: 10
+  global_scrape_timeout:
+    description: The global metrics scrape timeout.
+    type: string
+    default: "10s"
