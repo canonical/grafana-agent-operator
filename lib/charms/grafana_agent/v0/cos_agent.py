@@ -559,13 +559,14 @@ class COSAgentRequirer(Object):
         if not (provider_data := self._validated_provider_data(raw)):
             return
 
+        principal_unit = self._principal_unit
         # Copy data from the principal relation to the peer relation, so the leader could
         # follow up.
         # Save the originating unit name, so it could be used for topology later on by the leader.
         data = CosAgentPeersUnitData(  # peer relation databag model
-            principal_unit_name=event.unit.name,
-            principal_relation_id=str(event.relation.id),
-            principal_relation_name=event.relation.name,
+            principal_unit_name=principal_unit.name,
+            principal_relation_id=str(principal_unit.relation_id),
+            principal_relation_name=principal_unit.relation_name,
             metrics_alert_rules=provider_data.metrics_alert_rules,
             log_alert_rules=provider_data.log_alert_rules,
             dashboards=provider_data.dashboards,
@@ -599,29 +600,34 @@ class COSAgentRequirer(Object):
         Relies on the fact that, for subordinate relations, the only remote unit visible to
         *this unit* is the principal unit that this unit is attached to.
         """
-        if relations := self._principal_relations:
-            # Technically it's a list, but for subordinates there can only be one relation
-            principal_relation = next(iter(relations))
+        if principal_relation := self._principal_relation:
             if units := principal_relation.units:
                 # Technically it's a list, but for subordinates there can only be one
-                return next(iter(units))
+                unit = next(iter(units))
+                # We need the relation id and name in other methods so attach it to the unit object
+                unit.relation_id = principal_relation.id
+                unit.relation_name = principal_relation.name
+                return unit
 
         return None
 
     @property
-    def _principal_relations(self):
+    def _principal_relation(self) -> Optional[Relation]:
         relations = []
         for relation in self._charm.model.relations[self._relation_name]:
-            if not json.loads(relation.data[next(iter(relation.units))]["config"]).get(
-                ["subordinate"], False
-            ):
+            if not relation.units:
+                continue
+            relation_data = json.loads(relation.data[next(iter(relation.units))]["config"])
+            if not relation_data.get("subordinate", False):
                 relations.append(relation)
         if len(relations) > 1:
             logger.error(
                 "Multiple applications claiming to be principal. Update the cos-agent library in the client application charms."
             )
             raise MultiplePrincipalsError("Multiple principal applications.")
-        return relations
+        if len(relations) == 1:
+            return relations[0]
+        return None
 
     @property
     def _remote_data(self) -> List[CosAgentProviderUnitData]:

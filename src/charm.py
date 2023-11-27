@@ -277,13 +277,13 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         else:
             return {}
 
-        # Replace any existing topology labels with those from the principal.
-        for identifier in rules:
-            for group in rules[identifier]["groups"]:
-                for rule in group["rules"]:
-                    rule["labels"]["juju_model"] = principal_topology["juju_model"]
-                    rule["labels"]["juju_model_uuid"] = principal_topology["juju_model_uuid"]
-                    rule["labels"]["juju_application"] = principal_topology["juju_application"]
+        # # Replace any existing topology labels with those from the principal.
+        # for identifier in rules:
+        #     for group in rules[identifier]["groups"]:
+        #         for rule in group["rules"]:
+        #             rule["labels"]["juju_model"] = principal_topology["juju_model"]
+        #             rule["labels"]["juju_model_uuid"] = principal_topology["juju_model_uuid"]
+        #             rule["labels"]["juju_application"] = principal_topology["juju_application"]
 
         # Get the rules defined by Grafana Agent itself.
         own_rules = AlertRules(query_type="promql", topology=topology)
