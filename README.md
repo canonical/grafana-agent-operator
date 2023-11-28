@@ -36,7 +36,7 @@ juju add-model cos
 The Grafana agent may be deployed using the juju command line:
 
 ```bash
-juju deploy grafana-agent --trust
+juju deploy grafana-agent
 ```
 
 If required, you can remove the deployment completely:
@@ -47,27 +47,7 @@ juju destroy-model -y cos --no-wait --force --destroy-storage
 
 ## Relations
 
-Currently supported relations are:
-
-```yaml
-requires:
-  send-remote-write:
-    interface: prometheus_remote_write
-  metrics-endpoint:
-    interface: prometheus_scrape
-  logging-consumer:
-    interface: loki_push_api
-
-provides:
-  self-metrics-endpoint:
-    interface: prometheus_scrape
-  grafana-dashboard:
-    interface: grafana_dashboard
-  logging-provider:
-    interface: loki_push_api
-```
-
-More detailed information about these relations can be found in [Charmhub docs page](https://charmhub.io/grafana-agent/docs/relations).
+Detailed information about the relations can be found in [Charmhub integrations page](https://charmhub.io/grafana-agent/integrations).
 
 
 ## OCI Images
