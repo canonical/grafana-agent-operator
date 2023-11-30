@@ -3,7 +3,7 @@
 ## Overview
 
 This documents explains the processes and practices recommended for
-contributing enhancements to the Loki charm.
+contributing enhancements to the Grafana Agent charm.
 
 - Generally, before developing enhancements to this charm, you should consider opening an issue explaining your use case.
 - If you would like to chat with us about your use-cases or proposed implementation, you can reach us at [Canonical Mattermost public channel](https://chat.charmhub.io/charmhub/channels/lma) or [Discourse](https://discourse.charmhub.io/). The primary authors of this charm are available on the Mattermost channel as `@dylanstathis` and `@jose-masson`.

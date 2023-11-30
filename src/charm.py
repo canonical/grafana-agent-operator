@@ -438,7 +438,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                             {
                                 "targets": ["localhost"],
                                 "labels": {
-                                    "__path__": "/var/log/*log",
+                                    "__path__": "/var/log/**/*log",
                                     **self._principal_labels,
                                 },
                             }
