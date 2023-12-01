@@ -1,4 +1,4 @@
-# Grafana Agent Charmed Operator for Machines (LXD, MaaS, et al)
+# Grafana Agent Charmed Operator for Machines (LXD, MaaS, etc)
 
 
 
