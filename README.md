@@ -1,4 +1,4 @@
-# Grafana Agent Charmed Operator for Machines (LXD, MaaS, etc)
+# Grafana Agent Charmed Operator for Machines (LXD, MaaS, et al)
 
 
 [![Release Charm to Edge and Publish Libraries](https://github.com/canonical/grafana-agent-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/grafana-agent-operator/actions/workflows/release.yaml)
