@@ -1,5 +1,14 @@
 {
-  "__inputs": [],
+  "__inputs": [
+    {
+      "name": "prometheusds",
+      "label": "prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
   "__requires": [
     {
       "type": "grafana",
@@ -52,7 +61,10 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheusds}"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -99,7 +111,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "(\n  (1 - rate(node_cpu_seconds_total{job=\"integrations/node_exporter\", mode=\"idle\", instance=\"$instance\"}[$__interval]))\n/ ignoring(cpu) group_left\n  count without (cpu)( node_cpu_seconds_total{job=\"integrations/node_exporter\", mode=\"idle\", instance=\"$instance\"})\n)\n",
+          "expr": "(\n  (1 - rate(node_cpu_seconds_total{mode=\"idle\"}[$__interval]))\n/ ignoring(cpu) group_left\n  count without (cpu)( node_cpu_seconds_total{mode=\"idle\"})\n)\n",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 5,
@@ -153,7 +165,10 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheusds}"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -200,7 +215,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "node_load1{job=\"integrations/node_exporter\", instance=\"$instance\"}",
+          "expr": "node_load1",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -209,7 +224,7 @@
         },
         {
           "exemplar": true,
-          "expr": "node_load5{job=\"integrations/node_exporter\", instance=\"$instance\"}",
+          "expr": "node_load5",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -217,14 +232,14 @@
           "refId": "B"
         },
         {
-          "expr": "node_load15{job=\"node\", instance=\"$instance\"}",
+          "expr": "node_load15",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "15m load average",
           "refId": "C"
         },
         {
-          "expr": "count(node_cpu_seconds_total{job=\"node\", instance=\"$instance\", mode=\"idle\"})",
+          "expr": "count(node_cpu_seconds_total{mode=\"idle\"})",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "logical cores",
@@ -277,7 +292,10 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheusds}"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -324,7 +342,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "(\n  node_memory_MemTotal_bytes{job=\"integrations/node_exporter\", instance=\"$instance\"}\n-\n  node_memory_MemFree_bytes{job=\"integrations/node_exporter\", instance=\"$instance\"}\n-\n  node_memory_Buffers_bytes{job=\"integrations/node_exporter\", instance=\"$instance\"}\n-\n  node_memory_Cached_bytes{job=\"integrations/node_exporter\", instance=\"$instance\"}\n)\n",
+          "expr": "(\n  node_memory_MemTotal_bytes{}\n-\n  node_memory_MemFree_bytes{}\n-\n  node_memory_Buffers_bytes{}\n-\n  node_memory_Cached_bytes{}\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -332,21 +350,21 @@
           "refId": "A"
         },
         {
-          "expr": "node_memory_Buffers_bytes{job=\"node\", instance=\"$instance\"}",
+          "expr": "node_memory_Buffers_bytes",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "memory buffers",
           "refId": "B"
         },
         {
-          "expr": "node_memory_Cached_bytes{job=\"node\", instance=\"$instance\"}",
+          "expr": "node_memory_Cached_bytes",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "memory cached",
           "refId": "C"
         },
         {
-          "expr": "node_memory_MemFree_bytes{job=\"node\", instance=\"$instance\"}",
+          "expr": "node_memory_MemFree_bytes",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "memory free",
@@ -403,7 +421,10 @@
         "rgba(237, 129, 40, 0.89)",
         "rgba(245, 54, 54, 0.9)"
       ],
-      "datasource": "$datasource",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheusds}"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -460,7 +481,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "100 -\n(\n  avg(node_memory_MemAvailable_bytes{job=\"integrations/node_exporter\", instance=\"$instance\"})\n/\n  avg(node_memory_MemTotal_bytes{job=\"integrations/node_exporter\", instance=\"$instance\"})\n* 100\n)\n",
+          "expr": "100 -\n(\n  avg(node_memory_MemAvailable_bytes{})\n/\n  avg(node_memory_MemTotal_bytes{})\n* 100\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -486,7 +507,10 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheusds}"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -542,7 +566,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_disk_read_bytes_total{job=\"integrations/node_exporter\", instance=\"$instance\", device!=\"\"}[$__interval])",
+          "expr": "rate(node_disk_read_bytes_total{device!=\"\"}[$__interval])",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 2,
@@ -551,7 +575,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(node_disk_written_bytes_total{job=\"integrations/node_exporter\", instance=\"$instance\", device!=\"\"}[$__interval])",
+          "expr": "rate(node_disk_written_bytes_total{device!=\"\"}[$__interval])",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 2,
@@ -560,7 +584,7 @@
         },
         {
           "exemplar": true,
-          "expr": "rate(node_disk_io_time_seconds_total{job=\"integrations/node_exporter\", instance=\"$instance\", device!=\"\"}[$__interval])",
+          "expr": "rate(node_disk_io_time_seconds_total{device!=\"\"}[$__interval])",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 2,
@@ -614,7 +638,10 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheusds}"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -670,7 +697,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(\n  max by (device) (\n    node_filesystem_size_bytes{job=\"integrations/node_exporter\", instance=\"$instance\", fstype!=\"\"}\n  -\n    node_filesystem_avail_bytes{job=\"integrations/node_exporter\", instance=\"$instance\", fstype!=\"\"}\n  )\n)\n",
+          "expr": "sum(\n  max by (device) (\n    node_filesystem_size_bytes{fstype!=\"\"}\n  -\n    node_filesystem_avail_bytes{fstype!=\"\"}\n  )\n)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -678,7 +705,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(\n  max by (device) (\n    node_filesystem_avail_bytes{job=\"node\", instance=\"$instance\", fstype!=\"\"}\n  )\n)\n",
+          "expr": "sum(\n  max by (device) (\n    node_filesystem_avail_bytes{fstype!=\"\"}\n  )\n)\n",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "available",
@@ -731,7 +758,10 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheusds}"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -778,7 +808,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_network_receive_bytes_total{job=\"integrations/node_exporter\", instance=\"$instance\", device!=\"lo\"}[$__interval])",
+          "expr": "rate(node_network_receive_bytes_total{device!=\"lo\"}[$__interval])",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 2,
@@ -832,7 +862,10 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheusds}"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -879,7 +912,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(node_network_transmit_bytes_total{job=\"integrations/node_exporter\", instance=\"$instance\", device!=\"lo\"}[$__interval])",
+          "expr": "rate(node_network_transmit_bytes_total{device!=\"lo\"}[$__interval])",
           "format": "time_series",
           "interval": "1m",
           "intervalFactor": 2,
@@ -934,55 +967,35 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": [
-      {
-        "current": {
-          "selected": false,
-          "text": "grafanacloud-onsails-prom",
-          "value": "grafanacloud-onsails-prom"
-        },
-        "description": null,
-        "error": null,
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
-        "multi": false,
-        "name": "datasource",
-        "options": [],
-        "query": "prometheus",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
-      {
-        "allValue": null,
-        "current": {},
-        "datasource": "$datasource",
-        "definition": "label_values(node_exporter_build_info{job=\"integrations/node_exporter\"}, instance)",
-        "description": null,
-        "error": null,
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
-        "multi": false,
-        "name": "instance",
-        "options": [],
-        "query": {
-          "query": "label_values(node_exporter_build_info{job=\"integrations/node_exporter\"}, instance)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      }
-    ]
+      "list": [
+        {
+          "allValue": null,
+          "current": {},
+          "datasource": {
+            "uid": "${prometheusds}"
+          },
+          "hide": 0,
+          "definition": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_application=~\"$juju_application\"},juju_unit)",
+          "hide": 0,
+          "includeAll": true,
+          "label": "Juju unit",
+          "multi": false,
+          "name": "juju_unit",
+          "options": [],
+          "query": {
+            "query": "label_values(up{juju_model=~\"$juju_model\",juju_model_uuid=~\"$juju_model_uuid\",juju_application=~\"$juju_application\"},juju_unit)",
+            "refId": "StandardVariableQuery"
+          },
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "tagValuesQuery": "",
+          "tagsQuery": "",
+          "type": "query",
+          "useTags": false
+        }
+      ]
   },
   "time": {
     "from": "now-1h",
