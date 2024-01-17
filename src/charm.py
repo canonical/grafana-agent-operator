@@ -4,7 +4,6 @@
 # See LICENSE file for licensing details.
 
 """A  juju charm for Grafana Agent on Kubernetes."""
-import json
 import logging
 import os
 import re
@@ -13,13 +12,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, MultiplePrincipalsError
+from charms.grafana_agent.v0.cos_agent import COSAgentRequirer
 from charms.operator_libs_linux.v2 import snap  # type: ignore
 from cosl import JujuTopology
 from cosl.rules import AlertRules
 from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from ops.main import main
-from ops.model import BlockedStatus, MaintenanceStatus, Relation, Unit
+from ops.model import BlockedStatus, MaintenanceStatus, Relation
 
 logger = logging.getLogger(__name__)
 
@@ -191,19 +190,12 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
     def _on_cos_data_changed(self, event):
         """Trigger renewals of all data if there is a change."""
-        try:
-            self._connect_logging_snap_endpoints()
-            self._update_config()
-            self._update_status()
-            self._update_metrics_alerts()
-            self._update_loki_alerts()
-            self._update_grafana_dashboards()
-        except MultiplePrincipalsError:
-            logger.error(
-                "Multiple applications claiming to be principle. Update the cos-agent library in the client application charms."
-            )
-            self.unit.status = BlockedStatus("Multiple Principal Applications")
-            event.defer()
+        self._connect_logging_snap_endpoints()
+        self._update_config()
+        self._update_status()
+        self._update_metrics_alerts()
+        self._update_loki_alerts()
+        self._update_grafana_dashboards()
 
     def _on_cos_validation_error(self, event):
         msg_text = "Validation errors for cos-agent relation - check juju debug-log."
@@ -265,25 +257,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Return a list of metrics rules."""
         rules = self._cos.metrics_alerts
 
-        # Determine the principal topology.
-        principal_topology = self.principal_topology
-        if principal_topology:
-            topology = JujuTopology(
-                model=principal_topology["juju_model"],
-                model_uuid=principal_topology["juju_model_uuid"],
-                application=principal_topology["juju_application"],
-                unit=principal_topology["juju_unit"],
-            )
-        else:
-            return {}
-
-        # Replace any existing topology labels with those from the principal.
-        for identifier in rules:
-            for group in rules[identifier]["groups"]:
-                for rule in group["rules"]:
-                    rule["labels"]["juju_model"] = principal_topology["juju_model"]
-                    rule["labels"]["juju_model_uuid"] = principal_topology["juju_model_uuid"]
-                    rule["labels"]["juju_application"] = principal_topology["juju_application"]
+        topology = JujuTopology.from_charm(self)
 
         # Get the rules defined by Grafana Agent itself.
         own_rules = AlertRules(query_type="promql", topology=topology)
@@ -297,16 +271,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
     def metrics_jobs(self) -> list:
         """Return a list of metrics scrape jobs."""
-        jobs = self._cos.metrics_jobs
-        for job in jobs:
-            static_configs = job.get("static_configs", [])
-            for static_config in static_configs:
-                static_config["labels"] = {
-                    # Be sure to keep labels from static_config
-                    **static_config.get("labels", {}),
-                    **self._principal_labels,
-                }
-        return jobs
+        return self._cos.metrics_jobs
 
     def logs_rules(self) -> Dict[str, Any]:
         """Return a list of logging rules."""
@@ -412,7 +377,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                         "replacement": node_exporter_job_name,
                     },
                 ]
-                + self._principal_relabeling_config,
+                + self.relabeling_config,
             }
         }
 
@@ -439,14 +404,14 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                                 "targets": ["localhost"],
                                 "labels": {
                                     "__path__": "/var/log/**/*log",
-                                    **self._principal_labels,
+                                    **self._instance_labels,
                                 },
                             }
                         ],
                     },
                     {
                         "job_name": "syslog",
-                        "journal": {"labels": self._principal_labels},
+                        "journal": {"labels": self._instance_labels},
                         "pipeline_stages": [
                             {
                                 "drop": {
@@ -466,69 +431,8 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         return self.model.relations["cos-agent"] + self.model.relations["juju-info"]
 
     @property
-    def _principal_relation(self) -> Optional[Relation]:
-        """The cos-agent relation, if the charm we're related to supports it, else juju-info."""
-        # juju relate will do "the right thing" and default to cos-agent, falling back to
-        # juju-info if no cos-agent endpoint is available on the principal.
-        # Technically, if the charm is executing, there MUST be one of these two relations
-        # (otherwise, the subordinate won't even execute). However, for the sake of juju maybe not
-        # showing us the relation until after the first few install/start/config-changed, we err on
-        # the safe side and type this as Optional.
-        principal_relations = []
-        for relation in self._agent_relations:
-            if not relation.units:
-                continue
-            if relation.name == "juju-info":
-                principal_relations.append(relation)
-                continue
-            relation_data = json.loads(
-                relation.data[next(iter(relation.units))].get("config", "{}")
-            )
-            if not relation_data:
-                continue
-            if not relation_data.get("subordinate", False):
-                principal_relations.append(relation)
-        if len(principal_relations) > 1:
-            raise MultiplePrincipalsError("Multiple Principle Applications")
-        if len(principal_relations) == 1:
-            return principal_relations[0]
-        return None
-
-    @property
-    def principal_unit(self) -> Optional[Unit]:
-        """Return the principal unit this charm is subordinated to."""
-        relation = self._principal_relation
-        if relation and relation.units:
-            # Here, we could have popped the set and put the unit back or
-            # memoized the function, but in the interest of backwards compatibility
-            # with older python versions and avoiding adding temporary state to
-            # the charm instance, we choose this somewhat unsightly option.
-            return next(iter(relation.units))
-        return None
-
-    @property
-    def principal_topology(
-        self,
-    ) -> Dict[str, str]:
-        """Return the topology of the principal unit."""
-        unit = self.principal_unit
-        if unit:
-            # Note we can't include juju_charm as that information is not available to us.
-            return {
-                "juju_model": self.model.name,
-                "juju_model_uuid": self.model.uuid,
-                "juju_application": unit.app.name,
-                "juju_unit": unit.name,
-            }
-        return {}
-
-    @property
-    def _instance_topology(self) -> Dict[str, str]:
-        return self.principal_topology
-
-    @property
-    def _principal_labels(self) -> Dict[str, str]:
-        """Return a dict with labels from the topology of the principal charm."""
+    def _instance_labels(self) -> Dict[str, str]:
+        """Return a dict with labels from the topology of the this charm."""
         return {
             # Dict ordering will give the appropriate result here
             "instance": self._instance_name,
@@ -536,7 +440,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         }
 
     @property
-    def _principal_relabeling_config(self) -> list:
+    def relabeling_config(self) -> list:
         """Return a relabelling config with labels from the topology of the principal charm."""
         topology_relabels = (
             [
@@ -547,7 +451,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                 }
                 for key, value in self._instance_topology.items()
             ]
-            if self._principal_labels
+            if self._instance_labels
             else []
         )
 

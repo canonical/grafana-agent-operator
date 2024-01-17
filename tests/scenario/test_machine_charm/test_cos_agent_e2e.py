@@ -22,6 +22,7 @@ def placeholder_cfg_path(tmp_path):
     return tmp_path / "foo.yaml"
 
 
+PROVIDER_NAME = "mock-principal"
 PROM_RULE = """alert: HostCpuHighIowait
 expr: avg by (instance) (rate(node_cpu_seconds_total{mode="iowait"}[5m])) * 100 > 10
 for: 0m
@@ -93,7 +94,7 @@ def snap_is_installed():
 def provider_charm():
     class MyPrincipal(CharmBase):
         META = {
-            "name": "mock-principal",
+            "name": PROVIDER_NAME,
             "provides": {
                 "cos-agent": {"interface": "cos_agent", "scope": "container"},
             },
@@ -189,9 +190,9 @@ def test_subordinate_update(requirer_ctx):
     peer_out_data = json.loads(
         peer_out.local_unit_data[f"{CosAgentPeersUnitData.KEY}-mock-principal/0"]
     )
-    assert peer_out_data["principal_unit_name"] == "mock-principal/0"
-    assert peer_out_data["principal_relation_id"] == str(cos_agent1.relation_id)
-    assert peer_out_data["principal_relation_name"] == cos_agent1.endpoint
+    assert peer_out_data["unit_name"] == f"{PROVIDER_NAME}/0"
+    assert peer_out_data["relation_id"] == str(cos_agent1.relation_id)
+    assert peer_out_data["relation_name"] == cos_agent1.endpoint
 
     # passthrough as-is
     assert peer_out_data["metrics_alert_rules"] == config["metrics_alert_rules"]

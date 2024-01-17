@@ -118,4 +118,10 @@ def test_metrics_alert_rule_labels(vroot):
     alert_rules = json.loads(state_2.relations[2].local_app_data["alert_rules"])
     for group in alert_rules["groups"]:
         for rule in group["rules"]:
-            assert rule["labels"]["juju_application"] == "primary"
+            if "grafana-agent_alertgroup_alerts" in group["name"]:
+                assert (
+                    rule["labels"]["juju_application"] == "primary"
+                    or rule["labels"]["juju_application"] == "subordinate"
+                )
+            else:
+                assert rule["labels"]["juju_application"] == "grafana-agent"
