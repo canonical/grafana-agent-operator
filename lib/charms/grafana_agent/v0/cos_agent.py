@@ -714,7 +714,7 @@ class COSAgentRequirer(Object):
     def snap_log_endpoints(self) -> List[SnapEndpoint]:
         """Fetch logging endpoints exposed by related snaps."""
         plugs = []
-        for data, topology in self._remote_data:
+        for data, _ in self._remote_data:
             targets = data.log_slots
             if targets:
                 for target in targets:
