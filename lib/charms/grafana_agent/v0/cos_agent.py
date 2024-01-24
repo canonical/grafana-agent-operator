@@ -605,7 +605,6 @@ class COSAgentRequirer(Object):
             if not (provider_data := self._validated_provider_data(raw)):
                 continue
 
-            # Apply topology
             topology = JujuTopology(
                 model=self._charm.model.name,
                 model_uuid=self._charm.model.uuid,
