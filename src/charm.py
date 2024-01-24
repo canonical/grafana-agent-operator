@@ -404,14 +404,14 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                                 "targets": ["localhost"],
                                 "labels": {
                                     "__path__": "/var/log/**/*log",
-                                    **self._instance_labels,
+                                    **self._own_labels,
                                 },
                             }
                         ],
                     },
                     {
                         "job_name": "syslog",
-                        "journal": {"labels": self._instance_labels},
+                        "journal": {"labels": self._own_labels},
                         "pipeline_stages": [
                             {
                                 "drop": {
@@ -431,7 +431,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         return self.model.relations["cos-agent"] + self.model.relations["juju-info"]
 
     @property
-    def _instance_labels(self) -> Dict[str, str]:
+    def _own_labels(self) -> Dict[str, str]:
         """Return a dict with labels from the topology of the this charm."""
         return {
             # Dict ordering will give the appropriate result here
@@ -451,7 +451,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                 }
                 for key, value in self._instance_topology.items()
             ]
-            if self._instance_labels
+            if self._own_labels
             else []
         )
 
