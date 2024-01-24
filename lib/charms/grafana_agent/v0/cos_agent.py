@@ -260,7 +260,7 @@ class CosAgentProviderUnitData(pydantic.BaseModel):
     dashboards: List[GrafanaDashboard]
     # subordinate is no longer used but we should keep it until we bump the library to ensure
     # we don't break compatibility.
-    subordinate: Optional[bool]
+    subordinate: Optional[bool] = None
 
     # The following entries may vary across units of the same principal app.
     # this data does not need to be forwarded to the gagent leader
@@ -377,7 +377,6 @@ class COSAgentProvider(Object):
                         dashboards=self._dashboards,
                         metrics_scrape_jobs=self._scrape_jobs,
                         log_slots=self._log_slots,
-                        subordinate=None,
                     )
                     relation.data[self._charm.unit][data.KEY] = data.json()
                 except (
