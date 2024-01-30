@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 import charm
 import pytest
-from charms.grafana_agent.v0.cos_agent import MultiplePrincipalsError
 from cosl import GrafanaDashboard
 from scenario import Context, PeerRelation, State, SubordinateRelation
 
@@ -43,9 +42,6 @@ def test_no_relations(mock_run, vroot):
         assert not charm._cos.metrics_jobs
         assert not charm._cos.snap_log_endpoints
 
-        assert not charm._principal_relation
-        assert not charm.principal_unit
-
     set_run_out(mock_run, 0)
     trigger("start", State(), post_event=post_event, vroot=vroot)
 
@@ -58,9 +54,6 @@ def test_juju_info_relation(mock_run, vroot):
         assert not charm._cos.metrics_alerts
         assert not charm._cos.metrics_jobs
         assert not charm._cos.snap_log_endpoints
-
-        assert charm._principal_relation
-        assert charm.principal_unit
 
     set_run_out(mock_run, 0)
     trigger(
@@ -86,9 +79,6 @@ def test_cos_machine_relation(mock_run, vroot):
         assert not charm._cos.metrics_alerts
         assert charm._cos.metrics_jobs
 
-        assert charm._principal_relation.name == "cos-agent"
-        assert charm.principal_unit.name == "mock-principal/0"
-
     set_run_out(mock_run, 0)
 
     cos_agent_data = {
@@ -111,9 +101,9 @@ def test_cos_machine_relation(mock_run, vroot):
     peer_data = {
         "config": json.dumps(
             {
-                "principal_unit_name": "foo",
-                "principal_relation_id": "2",
-                "principal_relation_name": "peers",
+                "unit_name": "foo",
+                "relation_id": "2",
+                "relation_name": "peers",
                 "metrics_alert_rules": {},
                 "log_alert_rules": {},
                 "dashboards": [GrafanaDashboard._serialize('{"very long": "dashboard"}')],
@@ -146,10 +136,6 @@ def test_both_relations(mock_run, vroot):
         assert not charm._cos.metrics_alerts
         assert charm._cos.metrics_jobs
 
-        # Trying to get the principal should raise an exception.
-        with pytest.raises(MultiplePrincipalsError):
-            assert charm._principal_relation
-
     set_run_out(mock_run, 0)
 
     cos_agent_data = {
@@ -172,9 +158,9 @@ def test_both_relations(mock_run, vroot):
     peer_data = {
         "config": json.dumps(
             {
-                "principal_unit_name": "foo",
-                "principal_relation_id": "2",
-                "principal_relation_name": "peers",
+                "unit_name": "foo",
+                "relation_id": "2",
+                "relation_name": "peers",
                 "metrics_alert_rules": {},
                 "log_alert_rules": {},
                 "dashboards": [GrafanaDashboard._serialize('{"very long": "dashboard"}')],

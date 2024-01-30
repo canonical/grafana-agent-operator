@@ -30,9 +30,9 @@ def test_fetch_data_from_relation():
 
     relation.units = []  # there should be remote units in here, presumably
     config = {
-        "principal_unit_name": "principal/0",
-        "principal_relation_id": "0",
-        "principal_relation_name": "foo",
+        "unit_name": "principal/0",
+        "relation_id": "0",
+        "relation_name": "foo",
         "dashboards": [encode_as_dashboard(py_dash)],
     }
     relation.app = app
@@ -201,9 +201,9 @@ def test_cosagent_to_peer_data_flow_relation(leader):
         peers_data={
             1: {
                 f"{CosAgentPeersUnitData.KEY}-primary/0": CosAgentPeersUnitData(
-                    principal_unit_name="primary/0",
-                    principal_relation_id="42",
-                    principal_relation_name="foobar-relation",
+                    unit_name="primary/0",
+                    relation_id="42",
+                    relation_name="foobar-relation",
                     dashboards=[encode_as_dashboard(raw_dashboard_1)],
                 ).json()
             }
@@ -311,9 +311,9 @@ def test_cosagent_to_peer_data_app_vs_unit(leader):
         peers_data={
             1: {
                 f"{CosAgentPeersUnitData.KEY}-primary/23": CosAgentPeersUnitData(
-                    principal_unit_name="primary/23",
-                    principal_relation_id="42",
-                    principal_relation_name="cos-agent",
+                    unit_name="primary/23",
+                    relation_id="42",
+                    relation_name="cos-agent",
                     # data coming from `primary` is here:
                     dashboards=data_1.dashboards,
                     metrics_alert_rules=data_1.metrics_alert_rules,
