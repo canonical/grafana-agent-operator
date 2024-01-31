@@ -1,5 +1,5 @@
 alert: HostOomKillDetected
-expr: increase(node_vmstat_oom_kill[1m]) > 0
+expr: increase(node_vmstat_oom_kill[1h]) > 0
 for: 0m
 labels:
   severity: warning
