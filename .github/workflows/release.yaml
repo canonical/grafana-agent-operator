@@ -3,7 +3,7 @@ name: Release Charm to Edge and Publish Libraries
 on:
   push:
     branches:
-      - simme-test
+      - test/arm-runner
 
 jobs:
   release:
