@@ -14,14 +14,12 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-      - name: Setup LXD
-        uses: canonical/setup-lxd@v0.1.1
-        with:
-          channel: latest/stable
-      - name: Setup charmcraft
-        id: setup-charmcraft
+      - name: Setup dependencies
+        id: setup-deps
         run: |
           sudo snap install jq
+          sudo snap install lxd
+          sudo lxd init --auto
           sudo snap install charmcraft --classic
       - name: Build charm(s)
         id: builder
