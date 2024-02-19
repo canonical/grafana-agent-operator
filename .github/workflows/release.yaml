@@ -1,32 +1,15 @@
 name: Release Charm to Edge and Publish Libraries
 
 on:
+  workflow_dispatch: {}
   push:
     branches:
-      - test/arm-runner
+      - main
 
 jobs:
   release:
-    name: Simme testing the ARM builders
-    runs-on: Ubuntu_ARM64_4C_16G_01
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - name: Setup dependencies
-        id: setup-deps
-        run: |
-          sudo snap install jq
-          sudo snap install lxd
-          sudo lxd init --auto
-          sudo snap install charmcraft --classic
-      - name: Build charm(s)
-        id: builder
-        run: |
-          charmcraft pack 
-      - name: Store charms
-        uses: actions/upload-artifact@v3
-        with:
-          name: charms
-          path: ./*.charm
+    uses: canonical/observability/.github/workflows/charm-release.yaml@fix/build-for-arm
+    secrets: inherit
+    with:
+      provider: lxd
+      build-for-arm: true
