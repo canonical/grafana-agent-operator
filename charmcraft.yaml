@@ -37,6 +37,7 @@ bases:
       architectures: ["amd64"]
 parts:
   charm:
+    charm-strict-dependencies: true
     build-packages:
     - git
 
