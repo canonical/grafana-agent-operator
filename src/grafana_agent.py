@@ -8,6 +8,7 @@ import os
 import pathlib
 import re
 import shutil
+import socket
 from collections import namedtuple
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
@@ -804,7 +805,17 @@ class GrafanaAgentCharm(CharmBase):
     @property
     def _instance_name(self) -> str:
         """Return the instance name as interpolated topology values."""
-        return "_".join(list(self._instance_topology.values()))
+        # While in grafana-agent-k8s we want the instance name to made up of the topology, for
+        # machine charms we simply want the fqdn, as for VMs it's a vital part of the fingerprint.
+
+        # According to the docs, label characters are more limited than fqdn characters:
+        #
+        # > Labels may contain ASCII letters, numbers, as well as underscores.
+        # > They must match the regex [a-zA-Z_][a-zA-Z0-9_]*.
+        # >
+        # > Source: https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
+
+        return re.sub(r'[^a-zA-Z0-9_]', '_', socket.getfqdn())
 
     def _reload_config(self, attempts: int = 10) -> None:
         """Reload the config file.
