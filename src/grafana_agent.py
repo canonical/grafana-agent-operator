@@ -815,7 +815,7 @@ class GrafanaAgentCharm(CharmBase):
         # >
         # > Source: https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
 
-        return re.sub(r'[^a-zA-Z0-9_]', '_', socket.getfqdn())
+        return re.sub(r"[^a-zA-Z0-9_]", "_", socket.getfqdn())
 
     def _reload_config(self, attempts: int = 10) -> None:
         """Reload the config file.
