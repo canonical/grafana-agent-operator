@@ -88,6 +88,7 @@ class GrafanaCloudConfigRequirer(Object):
 
     @property
     def credentials(self):
+        """Return the credentials, if any; otherwise, return None."""
         if not all(
             self._is_not_empty(x)
             for x in [
