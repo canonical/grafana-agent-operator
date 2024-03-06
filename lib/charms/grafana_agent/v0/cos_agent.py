@@ -703,7 +703,7 @@ class COSAgentRequirer(Object):
                     static_config["labels"] = {
                         # Be sure to keep labels from static_config
                         **static_config.get("labels", {}),
-                        **topology.label_matcher_dict,
+                        **topology.as_dict(excluded_keys=["charm_name"]),
                     }
 
                 scrape_jobs.append(job)
