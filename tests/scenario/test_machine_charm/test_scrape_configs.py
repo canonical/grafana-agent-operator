@@ -81,7 +81,6 @@ def test_snap_endpoints(placeholder_cfg_path):
 
     assert written_path == placeholder_cfg_path
     written_config = yaml.safe_load(written_text)
-    print(written_config)
     logs_configs = written_config["logs"]["configs"]
     for config in logs_configs:
         if config["name"] == "log_file_scraper":

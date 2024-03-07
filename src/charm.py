@@ -469,7 +469,11 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         agent_fstab = SnapFstab(Path("/var/lib/snapd/mount/snap.grafana-agent.fstab"))
 
         shared_logs_configs = []
+        endpoint_owners = {endpoint.owner for endpoint in self._cos.snap_log_endpoints}
         for fstab_entry in agent_fstab.entries:
+            if fstab_entry not in endpoint_owners:
+                continue
+
             target_path = (
                 f"{fstab_entry.target}/**"
                 if fstab_entry
