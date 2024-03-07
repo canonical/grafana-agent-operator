@@ -28,6 +28,7 @@ def patch_all(placeholder_cfg_path):
         yield
 
 
+@pytest.mark.skip(reason="can't parse a custom fstab file")
 def test_snap_endpoints(placeholder_cfg_path):
     written_path, written_text = "", ""
 

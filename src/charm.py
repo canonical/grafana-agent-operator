@@ -469,20 +469,24 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         agent_fstab = SnapFstab(Path("/var/lib/snapd/mount/snap.grafana-agent.fstab"))
 
         shared_logs_configs = []
-        for endpoint in self._cos.snap_log_endpoints:
-            fstab_entry = agent_fstab.entry(endpoint.owner, endpoint.name)
+        endpoint_owners = {endpoint.owner for endpoint in self._cos.snap_log_endpoints}
+        for fstab_entry in agent_fstab.entries:
+            if fstab_entry.owner not in endpoint_owners:
+                continue
+
             target_path = (
                 f"{fstab_entry.target}/**"
                 if fstab_entry
                 else "/snap/grafana-agent/current/shared-logs/**"
             )
+            job_name = f"{fstab_entry.owner}-{fstab_entry.endpoint_source.replace('/', '-')}"
             job = {
-                "job_name": endpoint.owner,
+                "job_name": job_name,
                 "static_configs": [
                     {
                         "targets": ["localhost"],
                         "labels": {
-                            "job": endpoint.owner,
+                            "job": job_name,
                             "__path__": target_path,
                             **{
                                 k: v
@@ -501,14 +505,13 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                 ],
             }
 
-            if fstab_entry:
-                job["relabel_configs"] = [
-                    {
-                        "source_labels": ["__path__"],
-                        "target_label": "path",
-                        "replacement": fstab_entry.relative_target,
-                    }
-                ]
+            job["relabel_configs"] = [
+                {
+                    "source_labels": ["__path__"],
+                    "target_label": "path",
+                    "replacement": fstab_entry.relative_target,
+                }
+            ]
 
             shared_logs_configs.append(job)
 
