@@ -700,10 +700,17 @@ class COSAgentRequirer(Object):
 
                 # Apply labels to the scrape jobs
                 for static_config in job.get("static_configs", []):
+                    topo_as_dict = topology.as_dict(excluded_keys=["charm_name"])
                     static_config["labels"] = {
                         # Be sure to keep labels from static_config
                         **static_config.get("labels", {}),
-                        **topology.as_dict(excluded_keys=["charm_name"]),
+                        # TODO: We should add a new method in juju_topology.py
+                        # that like `as_dict` method, returns the keys with juju_ prefix
+                        **{
+                            "juju_{}".format(key): value
+                            for key, value in topo_as_dict.items()
+                            if value
+                        },
                     }
 
                 scrape_jobs.append(job)
