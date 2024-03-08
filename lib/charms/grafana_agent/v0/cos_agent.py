@@ -706,6 +706,7 @@ class COSAgentRequirer(Object):
                         **static_config.get("labels", {}),
                         # TODO: We should add a new method in juju_topology.py
                         # that like `as_dict` method, returns the keys with juju_ prefix
+                        # https://github.com/canonical/cos-lib/issues/18
                         **{
                             "juju_{}".format(key): value
                             for key, value in topo_as_dict.items()
