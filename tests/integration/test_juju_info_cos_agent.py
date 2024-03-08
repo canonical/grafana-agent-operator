@@ -12,6 +12,7 @@ from juju.errors import JujuError
 from pytest_operator.plugin import OpsTest
 
 agent = SimpleNamespace(name="agent")
+hwo = SimpleNamespace(charm="hardware-observer", name="hwo")
 principal = SimpleNamespace(charm="ubuntu", name="principal")
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,9 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
         jammy_charm_path, application_name=agent.name, num_units=0, series="jammy"
     )
 
+    # Hardware Observer
+    await ops_test.model.deploy(hwo.charm, application_name=hwo.name, series="jammy")
+
     # Placeholder for o11y relations (otherwise grafana agent charm is in blocked status)
     await ops_test.model.deploy(
         "grafana-cloud-integrator",
@@ -70,6 +74,8 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
 async def test_service(ops_test: OpsTest):
     # WHEN the charm is related to a principal over `juju-info`
     await ops_test.model.add_relation("agent:juju-info", principal.name)
+    await ops_test.model.add_relation("hwo:general-info", principal.name)
+    await ops_test.model.add_relation("hwo:cos-agent", "agent:cos-agent")
     await ops_test.model.add_relation("agent:grafana-cloud-config", "gci")
     await ops_test.model.wait_for_idle(apps=[principal.name, agent.name], status="active")
 
