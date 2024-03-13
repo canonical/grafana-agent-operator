@@ -17,7 +17,7 @@ maintainers:
     - Luca Bello <luca.bello@canonical.com>
     - Simon Aronsson <simon.aronsson@canonical.com>
 
-docs: https://github.com/canonical/grafana-agent-operator/blob/main/README.md
+docs: https://discourse.charmhub.io/t/grafana-agent-docs-index/13452
 website: https://charmhub.io/grafana-agent
 source: https://github.com/canonical/grafana-agent-operator
 issues: https://github.com/canonical/grafana-agent-operator/issues
