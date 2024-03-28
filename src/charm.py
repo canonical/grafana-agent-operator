@@ -469,9 +469,12 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         agent_fstab = SnapFstab(Path("/var/lib/snapd/mount/snap.grafana-agent.fstab"))
 
         shared_logs_configs = []
-        endpoint_owners = {endpoint.owner for endpoint in self._cos.snap_log_endpoints}
+        endpoint_owners = {
+            endpoint.owner: {"juju_application": topology.application, "juju_unit": topology.unit}
+            for endpoint, topology in self._cos.snap_log_endpoints_with_topology
+        }
         for fstab_entry in agent_fstab.entries:
-            if fstab_entry.owner not in endpoint_owners:
+            if fstab_entry.owner not in endpoint_owners.keys():
                 continue
 
             target_path = (
@@ -488,11 +491,14 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                         "labels": {
                             "job": job_name,
                             "__path__": target_path,
-                            **{
+                            **{  # from grafana-agent's topology
                                 k: v
                                 for k, v in self._instance_topology.items()
                                 if k not in ["juju_unit", "juju_application"]
                             },
+                            # from the topology of the charm owning the snap
+                            **endpoint_owners[fstab_entry.owner],
+                            "snap_name": fstab_entry.owner,
                         },
                     }
                 ],
