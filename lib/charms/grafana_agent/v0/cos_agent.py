@@ -721,8 +721,18 @@ class COSAgentRequirer(Object):
     @property
     def snap_log_endpoints(self) -> List[SnapEndpoint]:
         """Fetch logging endpoints exposed by related snaps."""
+        endpoints = []
+        endpoints_with_topology = self.snap_log_endpoints_with_topology
+        for endpoint, _ in endpoints_with_topology:
+            endpoints.append(endpoint)
+
+        return endpoints
+
+    @property
+    def snap_log_endpoints_with_topology(self) -> List[Tuple[SnapEndpoint, JujuTopology]]:
+        """Fetch logging endpoints and charm topology for each related snap."""
         plugs = []
-        for data, _ in self._remote_data:
+        for data, topology in self._remote_data:
             targets = data.log_slots
             if targets:
                 for target in targets:
@@ -733,15 +743,16 @@ class COSAgentRequirer(Object):
                             "endpoints; this should not happen."
                         )
                     else:
-                        plugs.append(target)
+                        plugs.append((target, topology))
 
         endpoints = []
-        for plug in plugs:
+        for plug, topology in plugs:
             if ":" not in plug:
                 logger.error(f"invalid plug definition received: {plug}. Ignoring...")
             else:
                 endpoint = SnapEndpoint(*plug.split(":"))
-                endpoints.append(endpoint)
+                endpoints.append((endpoint, topology))
+
         return endpoints
 
     @property
