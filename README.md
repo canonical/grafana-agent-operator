@@ -1,8 +1,8 @@
 # Grafana Agent Charmed Operator for Machines (LXD, MaaS, etc.)
 
-
-
+[![Charmhub Badge](https://charmhub.io/grafana-agent/badge.svg)](https://charmhub.io/grafana-agent)
 [![Release Charm to Edge and Publish Libraries](https://github.com/canonical/grafana-agent-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/grafana-agent-operator/actions/workflows/release.yaml)
+[![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
 ## Description
 
