@@ -154,11 +154,14 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     mandatory_relation_pairs = {
         "cos-agent": [  # must be paired with:
             {"grafana-cloud-config"},  # or
-            {"send-remote-write", "logging-consumer", "grafana-dashboards-provider"},
+            {"send-remote-write"},  # or
+            {"logging-consumer"},  # or
+            {"grafana-dashboards-provider"},
         ],
         "juju-info": [  # must be paired with:
             {"grafana-cloud-config"},  # or
-            {"send-remote-write", "logging-consumer"},
+            {"send-remote-write"},  # or
+            {"logging-consumer"},
         ],
     }
 

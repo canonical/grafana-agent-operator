@@ -46,16 +46,16 @@ class TestRelationStatus(unittest.TestCase):
 
     def test_cos_agent_with_relations(self):
         # WHEN an incoming relation is added
-        rel_id = self.harness.add_relation("cos-agent", "grafana-agent")
-        self.harness.add_relation_unit(rel_id, "grafana-agent/0")
+        rel_id = self.harness.add_relation("cos-agent", "zookeeper")
+        self.harness.add_relation_unit(rel_id, "zookeeper/0")
 
         # THEN the charm goes into blocked status
         self.assertIsInstance(self.harness.charm.unit.status, BlockedStatus)
 
         # AND WHEN at least one of the necessary outgoing relations is added
         for outgoing in ["send-remote-write", "logging-consumer", "grafana-dashboards-provider"]:
-            rel_id = self.harness.add_relation(outgoing, "grafana-agent")
-            self.harness.add_relation_unit(rel_id, "grafana-agent/0")
+            rel_id = self.harness.add_relation(outgoing, "cos-lite")
+            self.harness.add_relation_unit(rel_id, "cos-lite/0")
 
             # THEN the charm goes into active status when one mandatory relation is added
             self.assertIsInstance(self.harness.charm.unit.status, ActiveStatus)
@@ -65,6 +65,9 @@ class TestRelationStatus(unittest.TestCase):
 
         # THEN the charm keeps into active status
         self.assertIsInstance(self.harness.charm.unit.status, ActiveStatus)
+        self.assertEqual(
+            self.harness.charm.unit.status.message, "grafana-dashboards-provider: off"
+        )
 
     def test_juju_info_with_relations(self):
         # WHEN an incoming relation is added
