@@ -10,3 +10,5 @@ pydantic < 2
 requests
 cryptography == 42.0.4 # Pin prevents an error in the wheels due to crypto package moving to openssl 3.2.1
 jsonschema < 4  # Pin prevents the machine charm error "ModuleNotFoundError: No module named 'rpds.rpds'"
+# Deps: tracing
+opentelemetry-exporter-otlp-proto-http>=1.21.0
