@@ -14,3 +14,7 @@ options:
     description: The global metrics scrape timeout.
     type: string
     default: "10s"
+  global_scrape_interval:
+    description: The global metrics scrape interval.
+    type: string
+    default: "1m"
