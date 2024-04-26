@@ -777,14 +777,7 @@ class GrafanaAgentCharm(CharmBase):
         # While in grafana-agent-k8s we want the instance name to made up of the topology, for
         # machine charms we simply want the fqdn, as for VMs it's a vital part of the fingerprint.
 
-        # According to the docs, label characters are more limited than fqdn characters:
-        #
-        # > Labels may contain ASCII letters, numbers, as well as underscores.
-        # > They must match the regex [a-zA-Z_][a-zA-Z0-9_]*.
-        # >
-        # > Source: https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels
-
-        return re.sub(r"[^a-zA-Z0-9_]", "_", socket.getfqdn())
+        return socket.getfqdn()
 
     def _reload_config(self, attempts: int = 10) -> None:
         """Reload the config file.
