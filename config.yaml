@@ -11,10 +11,10 @@ options:
     type: boolean
     default: false
   global_scrape_timeout:
-    description: The global metrics scrape timeout.
+    description: How long to wait before timing out a scrape from a target.
     type: string
     default: "10s"
   global_scrape_interval:
-    description: The global metrics scrape interval.
+    description: How frequently should instances be scraped.
     type: string
     default: "1m"
