@@ -11,10 +11,14 @@ options:
     type: boolean
     default: false
   global_scrape_timeout:
-    description: How long to wait before timing out a scrape from a target.
+    description: >
+      How long to wait before timing out a scrape from a target.
+      Supported units: y, w, d, h, m, s.
     type: string
     default: "10s"
   global_scrape_interval:
-    description: How frequently should instances be scraped.
+    description: >
+      How frequently should instances be scraped.
+      Supported units: y, w, d, h, m, s.
     type: string
     default: "1m"
