@@ -40,12 +40,12 @@ from itertools import filterfalse
 from typing import List, Optional, Union, cast
 
 try:
-    from charms.tls_certificates_interface.v3.tls_certificates import (  # type: ignore
+    from charms.tls_certificates_interface.v2.tls_certificates import (  # type: ignore
         AllCertificatesInvalidatedEvent,
         CertificateAvailableEvent,
         CertificateExpiringEvent,
         CertificateInvalidatedEvent,
-        TLSCertificatesRequiresV3,
+        TLSCertificatesRequiresV2,
         generate_csr,
         generate_private_key,
     )
@@ -132,7 +132,7 @@ class CertHandler(Object):
         self.peer_relation_name = peer_relation_name
         self.certificates_relation_name = certificates_relation_name
 
-        self.certificates = TLSCertificatesRequiresV3(self.charm, self.certificates_relation_name)
+        self.certificates = TLSCertificatesRequiresV2(self.charm, self.certificates_relation_name)
 
         self.framework.observe(
             self.charm.on.config_changed,
