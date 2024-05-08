@@ -616,6 +616,7 @@ class GrafanaAgentCharm(CharmBase):
                 "wal_directory": "/tmp/agent/data",
                 "global": {
                     "scrape_timeout": self.model.config.get("global_scrape_timeout"),
+                    "scrape_interval": self.model.config.get("global_scrape_interval"),
                 },
                 "configs": [
                     {
