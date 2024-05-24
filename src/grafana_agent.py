@@ -771,6 +771,7 @@ class GrafanaAgentCharm(CharmBase):
             "juju_model_uuid": self.model.uuid,
             "juju_application": self.model.app.name,
             "juju_unit": self.model.unit.name,
+            "juju_charm": self.meta.name
         }
 
     @property
