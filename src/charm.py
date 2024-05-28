@@ -416,6 +416,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                                 "targets": ["localhost"],
                                 "labels": {
                                     "__path__": "/var/log/**/*log",
+                                    "job": "varlog",
                                     **self._own_labels,
                                 },
                             }
@@ -423,7 +424,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                     },
                     {
                         "job_name": "syslog",
-                        "journal": {"labels": self._own_labels},
+                        "journal": {"labels": self._own_labels | {"job": "syslog"}},
                         "pipeline_stages": [
                             {
                                 "drop": {
