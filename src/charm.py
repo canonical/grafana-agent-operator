@@ -424,7 +424,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                     },
                     {
                         "job_name": "syslog",
-                        "journal": {"labels": self._own_labels | {"job": "syslog"}},
+                        "journal": {"labels": {**self._own_labels, **{"job": "syslog"}}},
                         "pipeline_stages": [
                             {
                                 "drop": {
