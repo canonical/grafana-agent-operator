@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer
-from charms.operator_libs_linux.v2 import snap  # type: ignore
+from charms.operator_libs_linux.v2 import snap as snap_lib  # type: ignore
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from cosl import JujuTopology
@@ -21,12 +21,15 @@ from cosl.rules import AlertRules
 from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
+from snap_management import SnapManifest, install_snap
 
 logger = logging.getLogger(__name__)
 
 _FsType = str
 _MountOption = str
 _MountOptions = List[_MountOption]
+
+_snap_manifest_path = "templates/snap_installation.yaml"
 
 
 @dataclass
@@ -179,7 +182,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         # we always listen to juju-info-joined events even though one of the two paths will be
         # at all effects unused.
         self._cos = COSAgentRequirer(self)
-        self.snap = snap.SnapCache()["grafana-agent"]
         self._tracing = TracingEndpointRequirer(self, protocols=["otlp_http"])
         self.framework.observe(
             self._cos.on.data_changed,  # pyright: ignore
@@ -193,6 +195,12 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.remove, self._on_remove)
+
+    @property
+    def snap(self):
+        """Return the snap object for the Grafana Agent snap."""
+        # This is handled in a property to avoid calls to snapd until they're necessary.
+        return snap_lib.SnapCache()["grafana-agent"]
 
     def _on_juju_info_joined(self, _event):
         """Update the config when Juju info is joined."""
@@ -222,11 +230,15 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
     def on_install(self, _event) -> None:
         """Install the Grafana Agent snap."""
-        # Check if Grafana Agent is installed
+        self._install()
+
+    def _install(self) -> None:
+        """Install/refresh the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
         try:
-            self.snap.ensure(state=snap.SnapState.Latest)
-        except snap.SnapError as e:
+            snap_manifest = SnapManifest(Path(_snap_manifest_path))
+            install_snap(snap_manifest.get_snap_arguments("grafana-agent"))
+        except snap_lib.SnapError as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 
     def _on_start(self, _event) -> None:
@@ -237,7 +249,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
         try:
             self.snap.start(enable=True)
-        except snap.SnapError as e:
+        except snap_lib.SnapError as e:
             raise GrafanaAgentServiceError("Failed to start grafana-agent") from e
 
         self._update_status()
@@ -246,7 +258,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.unit.status = MaintenanceStatus("Stopping grafana-agent snap")
         try:
             self.snap.stop(disable=True)
-        except snap.SnapError as e:
+        except snap_lib.SnapError as e:
             raise GrafanaAgentServiceError("Failed to stop grafana-agent") from e
 
         self._update_status()
@@ -255,9 +267,15 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Uninstall the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Uninstalling grafana-agent snap")
         try:
-            self.snap.ensure(state=snap.SnapState.Absent)
-        except snap.SnapError as e:
+            self.snap.ensure(state=snap_lib.SnapState.Absent)
+        except snap_lib.SnapError as e:
             raise GrafanaAgentInstallError("Failed to uninstall grafana-agent") from e
+
+    def _on_upgrade_charm(self, _event=None):
+        """Upgrade the charm."""
+        # This is .observe()'d in the base class and thus not observed here
+        super()._on_upgrade_charm(_event)
+        self._install()
 
     @property
     def is_k8s(self) -> bool:
@@ -338,14 +356,14 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Stop grafana agent."""
         try:
             self.snap.stop()
-        except snap.SnapError as e:
+        except snap_lib.SnapError as e:
             raise GrafanaAgentServiceError("Failed to restart grafana-agent") from e
 
     def restart(self) -> None:
         """Restart grafana agent."""
         try:
             self.snap.restart()
-        except snap.SnapError as e:
+        except snap_lib.SnapError as e:
             raise GrafanaAgentServiceError("Failed to restart grafana-agent") from e
 
     def run(self, cmd: List[str]):
@@ -540,7 +558,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         for plug in self._cos.snap_log_endpoints:
             try:
                 self.snap.connect("logs", service=plug.owner, slot=plug.name)
-            except snap.SnapError as e:
+            except snap_lib.SnapError as e:
                 logger.error(f"error connecting plug {plug} to grafana-agent:logs")
                 logger.error(e.message)
 

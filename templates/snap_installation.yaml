@@ -1,0 +1,7 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+amd64:
+  - name: grafana-agent
+    install-type: store
+    revision: 22

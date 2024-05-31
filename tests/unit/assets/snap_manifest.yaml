@@ -1,0 +1,14 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+amd64:
+  - name: grafana-agent
+    install-type: store
+    revision: 22
+  - name: another-snap
+    install-type: store
+    channel: edge
+arm123:
+  - name: grafana-agent
+    install-type: store
+    revision: 123
