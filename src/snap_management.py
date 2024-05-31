@@ -13,7 +13,7 @@ Modified from https://github.com/canonical/k8s-operator/blob/main/charms/worker/
 import logging
 import subprocess
 from pathlib import Path
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 import charms.operator_libs_linux.v2.snap as snap_lib
 import yaml
@@ -103,7 +103,7 @@ class SnapManifest:
         dpkg_arch = ["dpkg", "--print-architecture"]
         return subprocess.check_output(dpkg_arch).decode("UTF-8").strip()
 
-    def _get_parsed_manifest(self) -> dict[str, SnapArgument]:
+    def _get_parsed_manifest(self) -> Dict[str, SnapArgument]:
         """Loads and parses the manifest file.
 
         Raises:
@@ -115,7 +115,7 @@ class SnapManifest:
         manifest_raw = self._get_manifest()
         return self._parse_manifest(manifest_raw)
 
-    def _get_manifest(self) -> List[dict]:
+    def _get_manifest(self) -> List[Dict]:
         """Loads the snap manifest file, returning the manifest for this architecture.
 
         Raises:
@@ -140,10 +140,12 @@ class SnapManifest:
 
         return manifest_this_arch
 
-    def _parse_manifest(self, manifest: List[dict]) -> dict[str, SnapArgument]:
+    def _parse_manifest(self, manifest: List[Dict]) -> Dict[str, SnapArgument]:
         """Parses a manifest defined by a list of snap dicts, rendering them to SnapArguments."""
         try:
-            manifest_parsed = {arg["name"]: parse_obj_as(SnapArgument, arg) for arg in manifest}
+            manifest_parsed = {
+                arg["name"]: parse_obj_as(SnapArgument, arg) for arg in manifest  # pyright: ignore
+            }
         except (ValidationError, KeyError) as e:
             log.warning("Failed to validate args=%s (%s)", self.arch, e)
             raise SnapManifestError("Failed to validate snap args")
