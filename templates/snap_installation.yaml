@@ -4,4 +4,7 @@
 amd64:
   - name: grafana-agent
     install-type: store
-    revision: 22
+    revision: 16  # 0.35.4
+    # not required for the charm if revision is specified, but included so CI can look for new
+    # versions in the channel
+    channel: stable
