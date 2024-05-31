@@ -2,11 +2,26 @@
 # See LICENSE file for licensing details.
 
 import json
+from unittest.mock import PropertyMock, patch
 
 import charm
+import pytest
 from scenario import Context, PeerRelation, State, SubordinateRelation
 
 from tests.scenario.helpers import get_charm_meta
+
+
+@pytest.fixture(autouse=True)
+def mock_config_path(placeholder_cfg_path):
+    with patch("grafana_agent.CONFIG_PATH", placeholder_cfg_path):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_snap():
+    """Mock the charm's snap property so we don't access the host."""
+    with patch("charm.GrafanaAgentMachineCharm.snap", new_callable=PropertyMock):
+        yield
 
 
 def test_juju_info_and_cos_agent(vroot):

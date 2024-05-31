@@ -2,14 +2,29 @@
 # See LICENSE file for licensing details.
 
 import json
+from unittest.mock import PropertyMock, patch
 
 import charm
+import pytest
 from scenario import Context, PeerRelation, Relation, State, SubordinateRelation
 
 from tests.scenario.helpers import get_charm_meta
 
 
-def test_metrics_alert_rule_labels(vroot):
+@pytest.fixture()
+def mock_config_path(placeholder_cfg_path):
+    with patch("grafana_agent.CONFIG_PATH", placeholder_cfg_path):
+        yield
+
+
+@pytest.fixture()
+def mock_snap():
+    """Mock the charm's snap property so we don't access the host."""
+    with patch("charm.GrafanaAgentMachineCharm.snap", new_callable=PropertyMock):
+        yield
+
+
+def test_metrics_alert_rule_labels(vroot, mock_config_path, mock_snap):
     """Check that metrics alert rules are labeled with principal topology."""
     cos_agent_primary_data = {
         "config": json.dumps(
@@ -105,6 +120,7 @@ def test_metrics_alert_rule_labels(vroot):
             PeerRelation("peers"),
         ],
     )
+
     state_0 = context.run(event=cos_agent_primary_relation.changed_event, state=state)
     (vroot / "metadata.yaml").unlink(missing_ok=True)
     (vroot / "config.yaml").unlink(missing_ok=True)
