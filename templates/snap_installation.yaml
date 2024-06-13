@@ -8,3 +8,10 @@ amd64:
     # not required for the charm if revision is specified, but included so CI can look for new
     # versions in the channel
     channel: stable
+arm64:
+  - name: grafana-agent
+    install-type: store
+    revision: 23  # 0.39.2
+    # not required for the charm if revision is specified, but included so CI can look for new
+    # versions in the channel
+    channel: stable
