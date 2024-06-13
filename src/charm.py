@@ -38,7 +38,7 @@ _grafana_agent_snap_spec = {
     },
     "arm64": {
         "name": "grafana-agent",
-        "revision": "??????",  # TODO: update this
+        "revision": "23",  # 0.39.2
     },
 }
 
