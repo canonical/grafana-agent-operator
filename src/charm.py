@@ -29,7 +29,6 @@ _FsType = str
 _MountOption = str
 _MountOptions = List[_MountOption]
 
-_snap_manifest_path = "templates/snap_installation.yaml"
 
 _grafana_agent_snap_spec = {
     "amd64": {
