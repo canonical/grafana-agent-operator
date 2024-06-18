@@ -21,25 +21,13 @@ from cosl.rules import AlertRules
 from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
-from snap_management import get_system_arch, install_snap
+from snap_management import install_ga_snap
 
 logger = logging.getLogger(__name__)
 
 _FsType = str
 _MountOption = str
 _MountOptions = List[_MountOption]
-
-
-_grafana_agent_snap_spec = {
-    "amd64": {
-        "name": "grafana-agent",
-        "revision": "16",  # 0.35.0
-    },
-    "arm64": {
-        "name": "grafana-agent",
-        "revision": "23",  # 0.39.2
-    },
-}
 
 
 @dataclass
@@ -246,9 +234,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Install/refresh the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
         try:
-            arch = get_system_arch()
-            snap_spec = _grafana_agent_snap_spec[arch]
-            install_snap(**snap_spec)
+            install_ga_snap()
         except snap_lib.SnapError as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 

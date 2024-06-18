@@ -21,22 +21,43 @@ from charms.operator_libs_linux.v2.snap import SnapState
 log = logging.getLogger(__name__)
 
 
-def install_snap(
+# Map of the grafana-agent snap revision to install for given architectures and strict mode.
+_grafana_agent_snap_spec = {
+    "strict": {
+        "amd64": {
+            "name": "grafana-agent",
+            "revision": "16",  # 0.35.0
+        },
+        "arm64": {
+            "name": "grafana-agent",
+            "revision": "23",  # 0.39.2
+        },
+    },
+}
+
+
+def install_ga_snap(classic: bool = False):
+    """Looks up system details and installs the appropriate grafana-agent snap revision."""
+    arch = get_system_arch()
+    confinement = "classic" if classic else "strict"
+    snap_spec = _grafana_agent_snap_spec[confinement][arch]
+    _install_snap(name=snap_spec["name"], revision=snap_spec["revision"], classic=classic)
+
+
+def _install_snap(
     name: str,
     revision: str,
+    classic: bool = False,
 ):
     """Install the given snap revision, holding it so it won't update."""
     cache = snap_lib.SnapCache()
     snap = cache[name]
-    log.info(f"Ensuring {name} snap is installed at revision={revision}")
-    snap.ensure(state=SnapState.Present, revision=revision)
-    # TODO: should hold be an argument in the yaml?
-    if revision:
-        log.info(
-            "Setting snap refresh for %s to hold=forever because revision is defined",
-            name,
-        )
-        snap.hold()
+    log.info(
+        f"Ensuring {name} snap is installed at revision={revision}"
+        f" with classic confinement={classic}"
+    )
+    snap.ensure(state=SnapState.Present, revision=revision, classic=classic)
+    snap.hold()
 
 
 def get_system_arch() -> str:
