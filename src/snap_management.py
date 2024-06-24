@@ -15,7 +15,6 @@ import logging
 import platform
 
 import charms.operator_libs_linux.v2.snap as snap_lib
-from charms.operator_libs_linux.v2.snap import SnapState
 
 # Log messages can be retrieved using juju debug-log
 log = logging.getLogger(__name__)
@@ -65,7 +64,7 @@ def _install_snap(
         f"Ensuring {name} snap is installed at revision={revision}"
         f" with classic confinement={classic}"
     )
-    snap.ensure(state=SnapState.Present, revision=revision, classic=classic)
+    snap.ensure(state=snap_lib.SnapState.Present, revision=revision, classic=classic)
     snap.hold()
 
 
