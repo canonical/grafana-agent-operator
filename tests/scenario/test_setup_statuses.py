@@ -46,7 +46,7 @@ def patch_all(substrate, mock_cfg_path):
         yield
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def mock_snap():
     """Mock the charm's snap property so we don't access the host."""
     with patch(
@@ -60,7 +60,7 @@ def mock_snap():
 
 
 @patch("charm.SnapManifest._get_system_arch", return_value="amd64")
-def test_install(_mock_manifest_get_system_arch, charm_type, substrate, vroot, mock_snap):
+def test_install(_mock_manifest_get_system_arch, charm_type, substrate, vroot):
     context = Context(
         charm_type,
         meta=get_charm_meta(charm_type),
@@ -75,7 +75,7 @@ def test_install(_mock_manifest_get_system_arch, charm_type, substrate, vroot, m
         assert out.unit_status == ("unknown", "")
 
 
-def test_start(charm_type, substrate, vroot, mock_snap):
+def test_start(charm_type, substrate, vroot):
     context = Context(
         charm_type,
         meta=get_charm_meta(charm_type),

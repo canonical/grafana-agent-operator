@@ -11,20 +11,20 @@ from scenario import Context, PeerRelation, Relation, State, SubordinateRelation
 from tests.scenario.helpers import get_charm_meta
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def mock_config_path(placeholder_cfg_path):
     with patch("grafana_agent.CONFIG_PATH", placeholder_cfg_path):
         yield
 
 
-@pytest.fixture()
+@pytest.fixture(autouse=True)
 def mock_snap():
     """Mock the charm's snap property so we don't access the host."""
     with patch("charm.GrafanaAgentMachineCharm.snap", new_callable=PropertyMock):
         yield
 
 
-def test_metrics_alert_rule_labels(vroot, mock_config_path, mock_snap):
+def test_metrics_alert_rule_labels(vroot):
     """Check that metrics alert rules are labeled with principal topology."""
     cos_agent_primary_data = {
         "config": json.dumps(
