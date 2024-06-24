@@ -1,8 +1,9 @@
+from contextlib import nullcontext as does_not_raise
 from unittest.mock import patch
 
 import pytest
 import snap_management
-from snap_management import _install_snap, install_ga_snap
+from snap_management import _install_snap, install_ga_snap, SnapSpecError
 
 snap_spec = {
     "strict": {
@@ -19,6 +20,15 @@ snap_spec = {
         "some-arch": {
             "name": "some-charm",
             "revision": "123",
+        },
+    },
+}
+
+minimal_snap_spec = {
+    "strict": {
+        "amd64": {
+            "name": "grafana-agent",
+            "revision": "16",  # 0.35.0
         },
     },
 }
@@ -66,3 +76,24 @@ class TestSnapInstall:
         mocked_install_snap.assert_called_once_with(
             name=expected["name"], revision=expected["revision"], classic=classic
         )
+
+    @patch("snap_management._grafana_agent_snap_spec", minimal_snap_spec)
+    @patch("snap_management.get_system_arch")
+    @patch("snap_management._install_snap")
+    @pytest.mark.parametrize(
+        "classic, arch, context_raised",
+        [
+            (True, "amd64", pytest.raises(SnapSpecError)),
+            (False, "arm64", pytest.raises(SnapSpecError)),
+            (False, "amd64", does_not_raise()),
+        ],
+    )
+    def test_install_ga_snap_validation_errors(
+        self, mocked_install_snap, mocked_get_system_arch, classic, arch, context_raised
+    ):
+        # Arrange
+        mocked_get_system_arch.return_value = arch
+
+        # Act
+        with context_raised:
+            install_ga_snap(classic=classic)

@@ -21,7 +21,7 @@ from cosl.rules import AlertRules
 from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
-from snap_management import install_ga_snap
+from snap_management import install_ga_snap, SnapSpecError
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +235,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
         try:
             install_ga_snap()
-        except snap.SnapError as e:
+        except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 
     def _on_start(self, _event) -> None:
