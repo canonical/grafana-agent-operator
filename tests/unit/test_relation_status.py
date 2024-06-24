@@ -22,7 +22,7 @@ class TestRelationStatus(unittest.TestCase):
         self.config_path_mock = patcher.start()
         self.addCleanup(patcher.stop)
 
-        patcher = patch("charm.snap_lib")
+        patcher = patch("charm.snap")
         self.mock_snap = patcher.start()
         self.addCleanup(patcher.stop)
 

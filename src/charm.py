@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer
-from charms.operator_libs_linux.v2 import snap as snap_lib  # type: ignore
+from charms.operator_libs_linux.v2 import snap  # type: ignore
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from cosl import JujuTopology
@@ -198,7 +198,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def snap(self):
         """Return the snap object for the Grafana Agent snap."""
         # This is handled in a property to avoid calls to snapd until they're necessary.
-        return snap_lib.SnapCache()["grafana-agent"]
+        return snap.SnapCache()["grafana-agent"]
 
     def _on_juju_info_joined(self, _event):
         """Update the config when Juju info is joined."""
@@ -235,7 +235,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
         try:
             install_ga_snap()
-        except snap_lib.SnapError as e:
+        except snap.SnapError as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 
     def _on_start(self, _event) -> None:
@@ -246,7 +246,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
         try:
             self.snap.start(enable=True)
-        except snap_lib.SnapError as e:
+        except snap.SnapError as e:
             raise GrafanaAgentServiceError("Failed to start grafana-agent") from e
 
         self._update_status()
@@ -255,7 +255,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.unit.status = MaintenanceStatus("Stopping grafana-agent snap")
         try:
             self.snap.stop(disable=True)
-        except snap_lib.SnapError as e:
+        except snap.SnapError as e:
             raise GrafanaAgentServiceError("Failed to stop grafana-agent") from e
 
         self._update_status()
@@ -264,8 +264,8 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Uninstall the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Uninstalling grafana-agent snap")
         try:
-            self.snap.ensure(state=snap_lib.SnapState.Absent)
-        except snap_lib.SnapError as e:
+            self.snap.ensure(state=snap.SnapState.Absent)
+        except snap.SnapError as e:
             raise GrafanaAgentInstallError("Failed to uninstall grafana-agent") from e
 
     def _on_upgrade_charm(self, _event=None):
@@ -353,14 +353,14 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Stop grafana agent."""
         try:
             self.snap.stop()
-        except snap_lib.SnapError as e:
+        except snap.SnapError as e:
             raise GrafanaAgentServiceError("Failed to restart grafana-agent") from e
 
     def restart(self) -> None:
         """Restart grafana agent."""
         try:
             self.snap.restart()
-        except snap_lib.SnapError as e:
+        except snap.SnapError as e:
             raise GrafanaAgentServiceError("Failed to restart grafana-agent") from e
 
     def run(self, cmd: List[str]):
@@ -555,7 +555,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         for plug in self._cos.snap_log_endpoints:
             try:
                 self.snap.connect("logs", service=plug.owner, slot=plug.name)
-            except snap_lib.SnapError as e:
+            except snap.SnapError as e:
                 logger.error(f"error connecting plug {plug} to grafana-agent:logs")
                 logger.error(e.message)
 
