@@ -48,7 +48,9 @@ def install_ga_snap(classic: bool = False):
     try:
         snap_spec = _grafana_agent_snap_spec[confinement][arch]
     except KeyError as e:
-        raise SnapSpecError(f"Snap spec not found for arch={arch} and confinement={confinement}") from e
+        raise SnapSpecError(
+            f"Snap spec not found for arch={arch} and confinement={confinement}"
+        ) from e
     _install_snap(name=snap_spec["name"], revision=snap_spec["revision"], classic=classic)
 
 

@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 import snap_management
-from snap_management import _install_snap, install_ga_snap, SnapSpecError
+from snap_management import SnapSpecError, _install_snap, install_ga_snap
 
 snap_spec = {
     "strict": {
@@ -61,9 +61,7 @@ def test_install_snap(mocked_cache):
         (True, "some-arch", snap_spec["classic"]["some-arch"]),
     ],
 )
-def test_install_ga_snap(
-    mocked_install_snap, mocked_get_system_arch, classic, arch, expected
-):
+def test_install_ga_snap(mocked_install_snap, mocked_get_system_arch, classic, arch, expected):
     # Arrange
     mocked_get_system_arch.return_value = arch
 

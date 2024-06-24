@@ -21,7 +21,7 @@ from cosl.rules import AlertRules
 from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
-from snap_management import install_ga_snap, SnapSpecError
+from snap_management import SnapSpecError, install_ga_snap
 
 logger = logging.getLogger(__name__)
 
