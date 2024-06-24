@@ -82,4 +82,5 @@ def get_system_arch() -> str:
         arch = "amd64"
     elif arch in ["aarch64", "arm64", "armv8b", "armv8l"]:
         arch = "arm64"
+    # else: keep arch as is
     return arch
