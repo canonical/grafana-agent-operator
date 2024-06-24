@@ -12,9 +12,8 @@ from tests.scenario.helpers import get_charm_meta
 
 
 @pytest.fixture(autouse=True)
-def mock_config_path(placeholder_cfg_path):
-    with patch("grafana_agent.CONFIG_PATH", placeholder_cfg_path):
-        yield
+def use_mock_config_path(mock_config_path):
+    yield
 
 
 @pytest.fixture(autouse=True)
