@@ -57,7 +57,10 @@ def _install_snap(
     revision: str,
     classic: bool = False,
 ):
-    """Install the given snap revision, holding it so it won't update."""
+    """Install and pin the given snap revision.
+
+    The revision will be held, i.e. it won't be automatically updated any time a new revision is released.
+    """
     cache = snap_lib.SnapCache()
     snap = cache[name]
     log.info(
