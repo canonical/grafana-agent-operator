@@ -268,10 +268,10 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         except snap.SnapError as e:
             raise GrafanaAgentInstallError("Failed to uninstall grafana-agent") from e
 
-    def _on_upgrade_charm(self, _event=None):
+    def _on_upgrade_charm(self, event=None):
         """Upgrade the charm."""
         # This is .observe()'d in the base class and thus not observed here
-        super()._on_upgrade_charm(_event)
+        super()._on_upgrade_charm(event)
         self._install()
 
     @property
