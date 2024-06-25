@@ -5,32 +5,16 @@ import pytest
 import snap_management
 from snap_management import SnapSpecError, _install_snap, install_ga_snap
 
+grafana_agent_snap_name = "grafana-agent"
 snap_spec = {
-    "strict": {
-        "amd64": {
-            "name": "grafana-agent",
-            "revision": "16",  # 0.35.0
-        },
-        "arm64": {
-            "name": "grafana-agent",
-            "revision": "23",  # 0.39.2
-        },
-    },
-    "classic": {
-        "some-arch": {
-            "name": "some-charm",
-            "revision": "123",
-        },
-    },
+    # (confinement, arch): revision
+    ("strict", "amd64"): "16",
+    ("strict", "arm64"): 42,  # Can be int or str
+    ("classic", "some-arch"): "123",
 }
 
 minimal_snap_spec = {
-    "strict": {
-        "amd64": {
-            "name": "grafana-agent",
-            "revision": "16",  # 0.35.0
-        },
-    },
+    ("strict", "amd64"): "16",
 }
 
 
@@ -50,18 +34,20 @@ def test_install_snap(mocked_cache):
     snap.hold.assert_called_once()
 
 
-@patch("snap_management._grafana_agent_snap_spec", snap_spec)
+@patch("snap_management._grafana_agent_snaps", snap_spec)
 @patch("snap_management.get_system_arch")
 @patch("snap_management._install_snap")
 @pytest.mark.parametrize(
-    "classic, arch, expected",
+    "classic, arch, expected_revision",
     [
-        (False, "amd64", snap_spec["strict"]["amd64"]),
-        (False, "arm64", snap_spec["strict"]["arm64"]),
-        (True, "some-arch", snap_spec["classic"]["some-arch"]),
+        (False, "amd64", snap_spec[("strict", "amd64")]),
+        (False, "arm64", snap_spec[("strict", "arm64")]),
+        (True, "some-arch", snap_spec[("classic", "some-arch")]),
     ],
 )
-def test_install_ga_snap(mocked_install_snap, mocked_get_system_arch, classic, arch, expected):
+def test_install_ga_snap(
+    mocked_install_snap, mocked_get_system_arch, classic, arch, expected_revision
+):
     # Arrange
     mocked_get_system_arch.return_value = arch
 
@@ -71,11 +57,11 @@ def test_install_ga_snap(mocked_install_snap, mocked_get_system_arch, classic, a
     # Assert
     mocked_get_system_arch.assert_called_once()
     mocked_install_snap.assert_called_once_with(
-        name=expected["name"], revision=expected["revision"], classic=classic
+        name=grafana_agent_snap_name, revision=str(expected_revision), classic=classic
     )
 
 
-@patch("snap_management._grafana_agent_snap_spec", minimal_snap_spec)
+@patch("snap_management._grafana_agent_snaps", minimal_snap_spec)
 @patch("snap_management.get_system_arch")
 @patch("snap_management._install_snap")
 @pytest.mark.parametrize(

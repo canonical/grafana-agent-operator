@@ -21,17 +21,11 @@ log = logging.getLogger(__name__)
 
 
 # Map of the grafana-agent snap revision to install for given architectures and strict mode.
-_grafana_agent_snap_spec = {
-    "strict": {
-        "amd64": {
-            "name": "grafana-agent",
-            "revision": "16",  # 0.35.0
-        },
-        "arm64": {
-            "name": "grafana-agent",
-            "revision": "23",  # 0.39.2
-        },
-    },
+_grafana_agent_snap_name = "grafana-agent"
+_grafana_agent_snaps = {
+    # (confinement, arch): revision
+    ("strict", "amd64"): 16,
+    ("strict", "arm64"): 23,
 }
 
 
@@ -46,12 +40,12 @@ def install_ga_snap(classic: bool = False):
     arch = get_system_arch()
     confinement = "classic" if classic else "strict"
     try:
-        snap_spec = _grafana_agent_snap_spec[confinement][arch]
+        revision = str(_grafana_agent_snaps[(confinement, arch)])
     except KeyError as e:
         raise SnapSpecError(
             f"Snap spec not found for arch={arch} and confinement={confinement}"
         ) from e
-    _install_snap(name=snap_spec["name"], revision=snap_spec["revision"], classic=classic)
+    _install_snap(name=_grafana_agent_snap_name, revision=revision, classic=classic)
 
 
 def _install_snap(
