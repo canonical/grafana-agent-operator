@@ -35,7 +35,7 @@ class SnapSpecError(Exception):
     pass
 
 
-def install_ga_snap(classic: bool = False):
+def install_ga_snap(classic: bool):
     """Looks up system details and installs the appropriate grafana-agent snap revision."""
     arch = get_system_arch()
     confinement = "classic" if classic else "strict"

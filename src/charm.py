@@ -234,7 +234,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Install/refresh the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
         try:
-            install_ga_snap()
+            install_ga_snap(classic=False)
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 
