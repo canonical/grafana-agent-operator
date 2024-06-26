@@ -13,6 +13,7 @@ from tests.scenario.helpers import get_charm_meta
 
 @pytest.fixture(autouse=True)
 def use_mock_config_path(mock_config_path):
+    # Use the common mock_config_path fixture from conftest.py
     yield
 
 
