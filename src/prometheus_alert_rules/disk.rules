@@ -73,3 +73,11 @@ groups:
         Host disk '{{ $labels.device }}' is probably writing too much data ({{ $value | printf "%.0f" }} > 50 MB/s) for last 5m.
           VALUE = {{ $value }}
           LABELS = {{ $labels }}
+  - alert: DiskRemoval
+    expr: count(node_disk_info{model!="", serial!="", wwn!=""}) by (instance, device) < on(instance, device) group_left() (count(node_disk_info{model!="", serial!="", wwn!=""} offset 30d) by (instance, device))
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Disk removal detected on {{ $labels.instance }}"
+      description: "Device {{ $labels.device }} on {{ $labels.instance }} has been removed which can be a hardware failure."
