@@ -14,15 +14,6 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import yaml
-from cosl import MandatoryRelationPairs
-from ops.charm import CharmBase
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
-from ops.pebble import APIError, PathError
-from requests import Session
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util import Retry  # type: ignore
-from yaml.parser import ParserError
-
 from charms.certificate_transfer_interface.v0.certificate_transfer import (
     CertificateAvailableEvent as CertificateTransferAvailableEvent,
 )
@@ -42,6 +33,14 @@ from charms.prometheus_k8s.v1.prometheus_remote_write import (
     PrometheusRemoteWriteConsumer,
 )
 from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer, charm_tracing_config
+from cosl import MandatoryRelationPairs
+from ops.charm import CharmBase
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.pebble import APIError, PathError
+from requests import Session
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util import Retry  # type: ignore
+from yaml.parser import ParserError
 
 logger = logging.getLogger(__name__)
 
@@ -420,11 +419,11 @@ class GrafanaAgentCharm(CharmBase):
         return maybe_func
 
     def update_alerts_rules(
-            self,
-            alerts_func: Any,
-            reload_func: Callable,
-            mapping: RulesMapping,
-            copy_files: bool = False,
+        self,
+        alerts_func: Any,
+        reload_func: Callable,
+        mapping: RulesMapping,
+        copy_files: bool = False,
     ):
         """Copy alert rules from relations and save them to disk."""
         # MetricsEndpointConsumer.alerts is not @property, but Loki is, so
@@ -445,7 +444,7 @@ class GrafanaAgentCharm(CharmBase):
         reload_func()
 
     def update_dashboards(
-            self, dashboards: Any, reload_func: Callable, mapping: RulesMapping
+        self, dashboards: Any, reload_func: Callable, mapping: RulesMapping
     ) -> None:
         """Copy dashboards from relations, save them to disk, and update."""
         shutil.rmtree(mapping.dest)
@@ -517,7 +516,7 @@ class GrafanaAgentCharm(CharmBase):
             return
 
         if missing := MandatoryRelationPairs(self.mandatory_relation_pairs).get_missing_as_str(
-                *active_relations
+            *active_relations
         ):
             self.unit.status = BlockedStatus(f"Missing {missing}")
             return
@@ -648,12 +647,14 @@ class GrafanaAgentCharm(CharmBase):
 
         tempo_endpoints = []
         if self._tracing.is_ready():
-            tempo_endpoints.append({
-                # outgoing traces are all otlp/grpc
-                # cit: While Tempo and the Agent both can ingest in multiple formats,
-                #  the Agent only exports in OTLP gRPC and HTTP.
-                "endpoint": self._tracing.get_endpoint("otlp_grpc"),
-            })
+            tempo_endpoints.append(
+                {
+                    # outgoing traces are all otlp/grpc
+                    # cit: While Tempo and the Agent both can ingest in multiple formats,
+                    #  the Agent only exports in OTLP gRPC and HTTP.
+                    "endpoint": self._tracing.get_endpoint("otlp_grpc"),
+                }
+            )
 
         if self._cloud.tempo_ready:
             tempo_endpoint = {
@@ -671,7 +672,9 @@ class GrafanaAgentCharm(CharmBase):
             endpoint["tls_config"] = {
                 "insecure_skip_verify": self.model.config.get("tls_insecure_skip_verify")
             }
-        return _TLSEndpoints(loki=loki_endpoints, prometheus=prometheus_endpoints, tempo=tempo_endpoints)
+        return _TLSEndpoints(
+            loki=loki_endpoints, prometheus=prometheus_endpoints, tempo=tempo_endpoints
+        )
 
     def _cli_args(self) -> str:
         """Return the cli arguments to pass to agent.
@@ -801,7 +804,7 @@ class GrafanaAgentCharm(CharmBase):
             return {}
 
         receivers = self._tracing.get_all_endpoints().receivers
-        receivers_set = set(receiver.protocol.name for receiver in receivers)
+        receivers_set = {receiver.protocol.name for receiver in receivers}
 
         # the below is copied verbatim from the tempo charm's config
         if not receivers_set:
@@ -823,7 +826,7 @@ class GrafanaAgentCharm(CharmBase):
         def _receiver_config(protocol: str):
             endpoint = "0.0.0.0:" + str(self._tracing_receivers_ports[protocol])  # type: ignore
             receiver_config = base_receiver_config.copy()
-            receiver_config['endpoint'] = endpoint
+            receiver_config["endpoint"] = endpoint
             return receiver_config
 
         config = {}
@@ -870,18 +873,19 @@ class GrafanaAgentCharm(CharmBase):
             return {}
 
         actions = [
-            {"key": key,
-             "action": "insert",  # add tag unless present already
-             "value": value} for key, value in self._instance_topology.items()
+            {"key": key, "action": "insert", "value": value}  # add tag unless present already
+            for key, value in self._instance_topology.items()
         ]
-        return {"configs": [
-            {
-                "name": "tempo",
-                "remote_write": endpoints.tempo,
-                "receivers": receivers,
-                "attributes": {"actions": actions}
-            }
-        ]}
+        return {
+            "configs": [
+                {
+                    "name": "tempo",
+                    "remote_write": endpoints.tempo,
+                    "receivers": receivers,
+                    "attributes": {"actions": actions},
+                }
+            ]
+        }
 
     @property
     def _loki_config(self) -> Dict[str, Union[Any, List[Any]]]:

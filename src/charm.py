@@ -14,7 +14,6 @@ from typing import Any, Dict, List, Optional, Union
 
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer
 from charms.operator_libs_linux.v2 import snap  # type: ignore
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
 from cosl import JujuTopology
 from cosl.rules import AlertRules
@@ -181,9 +180,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         # we always listen to juju-info-joined events even though one of the two paths will be
         # at all effects unused.
         self._cos = COSAgentRequirer(self)
-        self.snap = snap.SnapCache()["grafana-agent"]
-        self._tracing = TracingEndpointRequirer(self, protocols=["otlp_http"])
-
         self.framework.observe(
             self._cos.on.data_changed,  # pyright: ignore
             self._on_cos_data_changed,
