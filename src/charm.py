@@ -15,7 +15,6 @@ from typing import Any, Dict, List, Optional, Union
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer
 from charms.operator_libs_linux.v2 import snap  # type: ignore
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from cosl import JujuTopology
 from cosl.rules import AlertRules
 from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
@@ -149,8 +148,9 @@ class GrafanaAgentServiceError(GrafanaAgentError):
 
 
 @trace_charm(
-    tracing_endpoint="tracing_endpoint",
-    server_cert="server_cert_path",
+    # these attrs are implemented on GrafanaAgentCharm
+    tracing_endpoint="_charm_tracing_endpoint",
+    server_cert="_server_cert",
     extra_types=(COSAgentRequirer, GrafanaAgentCharm, JujuTopology, SnapFstab),
 )
 class GrafanaAgentMachineCharm(GrafanaAgentCharm):
@@ -180,7 +180,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         # at all effects unused.
         self._cos = COSAgentRequirer(self)
         self.snap = snap.SnapCache()["grafana-agent"]
-        self._tracing = TracingEndpointRequirer(self, protocols=["otlp_http"])
+
         self.framework.observe(
             self._cos.on.data_changed,  # pyright: ignore
             self._on_cos_data_changed,
@@ -396,11 +396,11 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     @property
     def _additional_log_configs(self) -> List[Dict[str, Any]]:
         """Additional logging configuration for machine charms."""
-        _, loki_endpoints = self._enrich_endpoints()
+        endpoints = self._endpoints_with_tls()
         return [
             {
                 "name": "log_file_scraper",
-                "clients": loki_endpoints,
+                "clients": endpoints.loki,
                 "scrape_configs": [
                     {
                         "job_name": "varlog",
@@ -546,18 +546,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def positions_dir(self) -> str:
         """Return the positions directory."""
         return "${SNAP_DATA}"
-
-    @property
-    def tracing_endpoint(self) -> Optional[str]:
-        """Otlp http endpoint for charm instrumentation."""
-        if self._tracing.is_ready():
-            return self._tracing.get_endpoint("otlp_http")
-        return None
-
-    @property
-    def server_cert_path(self) -> Optional[str]:
-        """Server certificate path for tls tracing."""
-        return self._cert_path
 
 
 if __name__ == "__main__":

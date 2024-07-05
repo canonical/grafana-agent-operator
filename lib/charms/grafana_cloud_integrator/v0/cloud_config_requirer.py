@@ -122,6 +122,10 @@ class GrafanaCloudConfigRequirer(Object):
         return self._is_not_empty(self.prometheus_url)
 
     @property
+    def tempo_ready(self):
+        return self._is_not_empty(self.tempo_url)
+
+    @property
     def prometheus_endpoint(self) -> dict:
         """Return the prometheus endpoint dict."""
         if not self.prometheus_ready:
@@ -134,11 +138,15 @@ class GrafanaCloudConfigRequirer(Object):
         return endpoint
 
     @property
-    def loki_url(self):
+    def loki_url(self) -> str:
         return self._data.get("loki_url", "")
 
     @property
-    def prometheus_url(self):
+    def tempo_url(self) -> str:
+        return self._data.get("tempo_url", "")
+
+    @property
+    def prometheus_url(self) -> str:
         return self._data.get("prometheus_url", "")
 
     @property
