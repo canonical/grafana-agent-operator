@@ -7,7 +7,7 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: Host '{{labe;s.instance}}' is down.
+      summary: Host '{{labels.instance}}' is down.
       description: >-
         Host '{{ $labels.instance }}' is down.
           VALUE = {{ $value }}
