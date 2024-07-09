@@ -63,7 +63,8 @@ The constructor of `COSAgentProvider` has only one required and nine optional pa
 
 - `dashboard_dirs`: List of directories where the dashboards are stored in the Charmed Operator.
 
-- `refresh_events`: List of events on which to refresh relation data.
+- `refresh_events`: List of events on which to refresh relation data. If no events is passed, the
+    relation data will be refreshed on config-changed and charm upgrade.
 
 - `scrape_configs`: List of standard scrape_configs dicts or a callable that returns the list in
     case the configs need to be generated dynamically. The contents of this list will be merged
@@ -171,7 +172,8 @@ and two optional arguments.
   `cos_agent` interface.
   The default value of this argument is "cos-agent".
 
-- `refresh_events`: List of events on which to refresh relation data.
+- `refresh_events`: List of events on which to refresh relation data. If no events is passed, the
+    relation data will be refreshed on config-changed and charm upgrade.
 
 
 ### Example 1 - Minimal instrumentation:
@@ -352,7 +354,10 @@ class COSAgentProvider(Object):
         self._recursive = recurse_rules_dirs
         self._log_slots = log_slots or []
         self._dashboard_dirs = dashboard_dirs
-        self._refresh_events = refresh_events or [self._charm.on.config_changed]
+        self._refresh_events = refresh_events or [
+            self._charm.on.config_changed,
+            self._charm.on.upgrade_charm,
+        ]
 
         events = self._charm.on[relation_name]
         self.framework.observe(events.relation_joined, self._on_refresh)
@@ -494,7 +499,10 @@ class COSAgentRequirer(Object):
         self._charm = charm
         self._relation_name = relation_name
         self._peer_relation_name = peer_relation_name
-        self._refresh_events = refresh_events or [self._charm.on.config_changed]
+        self._refresh_events = refresh_events or [
+            self._charm.on.config_changed,
+            self._charm.on.upgrade_charm,
+        ]
 
         events = self._charm.on[relation_name]
         self.framework.observe(
