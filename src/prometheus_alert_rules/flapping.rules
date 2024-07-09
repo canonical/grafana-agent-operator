@@ -1,0 +1,14 @@
+groups:
+- name: AlertRules
+  rules:
+  - alert: AlertRulesFlapping
+    expr: changes(ALERTS_FOR_STATE{severity = "warning"}[1h]) > 5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: Host '{{labels.instance}}' suffers from flapping alerts.
+      description: >-
+        Host '{{labels.instance}}' suffers from flapping warning-level alerts.
+          VALUE = {{ $value }}
+          LABELS = {{ $labels }}
