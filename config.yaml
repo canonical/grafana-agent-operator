@@ -2,6 +2,12 @@
 # See LICENSE file for licensing details.
 
 options:
+  vendor_telemetry:
+    description: |
+      Toggles whether to send telemetry to the vendor, i.e. Grafana.
+      If your deployment is airgapped, turn this off.
+    type: boolean
+    default: true
   tls_insecure_skip_verify:
     description: |
       Flag to skip the verification for insecure TLS.
