@@ -1,0 +1,14 @@
+groups:
+- name: HostHealth
+  rules:
+  - alert: HostAvailable
+    expr: up < 1 or absent(up)
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: Host '{{labe;s.instance}}' is down.
+      description: >-
+        Host '{{ $labels.instance }}' is down.
+          VALUE = {{ $value }}
+          LABELS = {{ $labels }}
