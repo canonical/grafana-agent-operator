@@ -1,8 +1,8 @@
 groups:
 - name: HostHealth
   rules:
-  - alert: HostAvailable
-    expr: up < 1 or absent(up)
+  - alert: HostUp
+    expr: up < 1
     for: 5m
     labels:
       severity: warning
@@ -10,5 +10,16 @@ groups:
       summary: Host '{{labels.instance}}' is down.
       description: >-
         Host '{{ $labels.instance }}' is down.
+          VALUE = {{ $value }}
+          LABELS = {{ $labels }}
+  - alert: HostAvailable
+    expr: absent(up)
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: Metrics endpoint for host '{{labels.instance}}' is unreachable.
+      description: >-
+        The metrics endpoint for host '{{ $labels.instance }}' is unreachable.
           VALUE = {{ $value }}
           LABELS = {{ $labels }}
