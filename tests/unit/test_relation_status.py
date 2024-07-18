@@ -70,7 +70,8 @@ class TestRelationStatus(unittest.TestCase):
         # THEN the charm keeps into active status
         self.assertIsInstance(self.harness.charm.unit.status, ActiveStatus)
         self.assertEqual(
-            self.harness.charm.unit.status.message, "grafana-dashboards-provider: off"
+            self.harness.charm.unit.status.message,
+            "grafana-dashboards-provider: off, tracing: off",
         )
 
     def test_juju_info_with_relations(self):

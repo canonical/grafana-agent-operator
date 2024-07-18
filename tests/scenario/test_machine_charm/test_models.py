@@ -45,6 +45,7 @@ def test_cos_agent_provider_unit_data_dashboard_serialization():
         "metrics_scrape_jobs": [],
         "log_slots": [],
         "subordinate": True,
+        "tracing_protocols": None,
     }
 
 
