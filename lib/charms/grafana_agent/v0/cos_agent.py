@@ -206,19 +206,33 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm)
 ```
 """
 
+import enum
 import json
 import logging
 from collections import namedtuple
 from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Literal,
+    MutableMapping,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 import pydantic
 from cosl import GrafanaDashboard, JujuTopology
 from cosl.rules import AlertRules
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
-from ops.model import Relation
+from ops.model import ModelError, Relation
 from ops.testing import CharmType
 
 if TYPE_CHECKING:
@@ -234,7 +248,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 8
+LIBPATCH = 9
 
 PYDEPS = ["cosl", "pydantic < 2"]
 
@@ -249,7 +263,195 @@ logger = logging.getLogger(__name__)
 SnapEndpoint = namedtuple("SnapEndpoint", "owner, name")
 
 
-class CosAgentProviderUnitData(pydantic.BaseModel):
+# TODO these seem like they shouldn't be here. We shouldn't also import from tracing, but maybe we could import from a common package?
+# Note: MutableMapping is imported from the typing module and not collections.abc
+# because subscripting collections.abc.MutableMapping was added in python 3.9, but
+# most of our charms are based on 20.04, which has python 3.8.
+
+_RawDatabag = MutableMapping[str, str]
+
+
+class TransportProtocolType(str, enum.Enum):
+    """Receiver Type."""
+
+    http = "http"
+    grpc = "grpc"
+
+
+receiver_protocol_to_transport_protocol = {
+    "zipkin": TransportProtocolType.http,
+    "kafka": TransportProtocolType.http,
+    "opencensus": TransportProtocolType.http,
+    "tempo_http": TransportProtocolType.http,
+    "tempo_grpc": TransportProtocolType.grpc,
+    "otlp_grpc": TransportProtocolType.grpc,
+    "otlp_http": TransportProtocolType.http,
+}
+
+IngesterProtocol = Literal[
+    "otlp_grpc", "otlp_http", "zipkin", "tempo", "jaeger_http_thrift", "jaeger_grpc"
+]
+
+
+class TracingError(Exception):
+    """Base class for custom errors raised by tracing."""
+
+
+class NotReadyError(TracingError):
+    """Raised by the provider wrapper if a requirer hasn't published the required data (yet)."""
+
+
+class ProtocolNotRequestedError(TracingError):
+    """Raised if the user attempts to obtain an endpoint for a protocol it did not request."""
+
+
+class DataValidationError(TracingError):
+    """Raised when data validation fails on IPU relation data."""
+
+
+class AmbiguousRelationUsageError(TracingError):
+    """Raised when one wrongly assumes that there can only be one relation on an endpoint."""
+
+
+# TODO we want to eventually use `DatabagModel` from cosl but it likely needs a move to common package first
+if int(pydantic.version.VERSION.split(".")[0]) < 2:
+
+    class DatabagModel(pydantic.BaseModel):  # type: ignore
+        """Base databag model."""
+
+        class Config:
+            """Pydantic config."""
+
+            # ignore any extra fields in the databag
+            extra = "ignore"
+            """Ignore any extra fields in the databag."""
+            allow_population_by_field_name = True
+            """Allow instantiating this class by field name (instead of forcing alias)."""
+
+        _NEST_UNDER = None
+
+        @classmethod
+        def load(cls, databag: MutableMapping):
+            """Load this model from a Juju databag."""
+            if cls._NEST_UNDER:
+                return cls.parse_obj(json.loads(databag[cls._NEST_UNDER]))
+
+            try:
+                data = {
+                    k: json.loads(v)
+                    for k, v in databag.items()
+                    # Don't attempt to parse model-external values
+                    if k in {f.alias for f in cls.__fields__.values()}
+                }
+            except json.JSONDecodeError as e:
+                msg = f"invalid databag contents: expecting json. {databag}"
+                logger.error(msg)
+                raise DataValidationError(msg) from e
+
+            try:
+                return cls.parse_raw(json.dumps(data))  # type: ignore
+            except pydantic.ValidationError as e:
+                msg = f"failed to validate databag: {databag}"
+                logger.debug(msg, exc_info=True)
+                raise DataValidationError(msg) from e
+
+        def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
+            """Write the contents of this model to Juju databag.
+
+            :param databag: the databag to write the data to.
+            :param clear: ensure the databag is cleared before writing it.
+            """
+            if clear and databag:
+                databag.clear()
+
+            if databag is None:
+                databag = {}
+
+            if self._NEST_UNDER:
+                databag[self._NEST_UNDER] = self.json(by_alias=True)
+                return databag
+
+            dct = self.dict()
+            for key, field in self.__fields__.items():  # type: ignore
+                value = dct[key]
+                databag[field.alias or key] = json.dumps(value)
+
+            return databag
+
+else:
+    from pydantic import ConfigDict
+
+    class DatabagModel(pydantic.BaseModel):
+        """Base databag model."""
+
+        model_config = ConfigDict(
+            # ignore any extra fields in the databag
+            extra="ignore",
+            # Allow instantiating this class by field name (instead of forcing alias).
+            populate_by_name=True,
+            # Custom config key: whether to nest the whole datastructure (as json)
+            # under a field or spread it out at the toplevel.
+            _NEST_UNDER=None,  # type: ignore
+        )
+        """Pydantic config."""
+
+        @classmethod
+        def load(cls, databag: MutableMapping):
+            """Load this model from a Juju databag."""
+            nest_under = cls.model_config.get("_NEST_UNDER")  # type: ignore
+            if nest_under:
+                return cls.model_validate(json.loads(databag[nest_under]))  # type: ignore
+
+            try:
+                data = {
+                    k: json.loads(v)
+                    for k, v in databag.items()
+                    # Don't attempt to parse model-external values
+                    if k in {(f.alias or n) for n, f in cls.__fields__.items()}
+                }
+            except json.JSONDecodeError as e:
+                msg = f"invalid databag contents: expecting json. {databag}"
+                logger.error(msg)
+                raise DataValidationError(msg) from e
+
+            try:
+                return cls.model_validate_json(json.dumps(data))  # type: ignore
+            except pydantic.ValidationError as e:
+                msg = f"failed to validate databag: {databag}"
+                logger.debug(msg, exc_info=True)
+                raise DataValidationError(msg) from e
+
+        def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
+            """Write the contents of this model to Juju databag.
+
+            :param databag: the databag to write the data to.
+            :param clear: ensure the databag is cleared before writing it.
+            """
+            if clear and databag:
+                databag.clear()
+
+            if databag is None:
+                databag = {}
+            nest_under = self.model_config.get("_NEST_UNDER")
+            if nest_under:
+                databag[nest_under] = self.model_dump_json(  # type: ignore
+                    by_alias=True,
+                    # skip keys whose values are default
+                    exclude_defaults=True,
+                )
+                return databag
+
+            dct = self.model_dump()  # type: ignore
+            for key, field in self.model_fields.items():  # type: ignore
+                value = dct[key]
+                if value == field.default:
+                    continue
+                databag[field.alias or key] = json.dumps(value)
+
+            return databag
+
+
+class CosAgentProviderUnitData(DatabagModel):
     """Unit databag model for `cos-agent` relation."""
 
     # The following entries are the same for all units of the same principal.
@@ -267,13 +469,16 @@ class CosAgentProviderUnitData(pydantic.BaseModel):
     metrics_scrape_jobs: List[Dict]
     log_slots: List[str]
 
+    # Requested tracing protocols.
+    tracing_protocols: Optional[List[str]] = None
+
     # when this whole datastructure is dumped into a databag, it will be nested under this key.
     # while not strictly necessary (we could have it 'flattened out' into the databag),
     # this simplifies working with the model.
     KEY: ClassVar[str] = "config"
 
 
-class CosAgentPeersUnitData(pydantic.BaseModel):
+class CosAgentPeersUnitData(DatabagModel):
     """Unit databag model for `peers` cos-agent machine charm peer relation."""
 
     # We need the principal unit name and relation metadata to be able to render identifiers
@@ -304,6 +509,83 @@ class CosAgentPeersUnitData(pydantic.BaseModel):
         return self.unit_name.split("/")[0]
 
 
+if int(pydantic.version.VERSION.split(".")[0]) < 2:
+
+    class ProtocolType(pydantic.BaseModel):  # type: ignore
+        """Protocol Type."""
+
+        class Config:
+            """Pydantic config."""
+
+            use_enum_values = True
+            """Allow serializing enum values."""
+
+        name: str = pydantic.Field(
+            ...,
+            description="Receiver protocol name. What protocols are supported (and what they are called) "
+            "may differ per provider.",
+            examples=["otlp_grpc", "otlp_http", "tempo_http"],
+        )
+
+        type: TransportProtocolType = pydantic.Field(
+            ...,
+            description="The transport protocol used by this receiver.",
+            examples=["http", "grpc"],
+        )
+
+else:
+
+    class ProtocolType(pydantic.BaseModel):
+        """Protocol Type."""
+
+        model_config = pydantic.ConfigDict(
+            # Allow serializing enum values.
+            use_enum_values=True
+        )
+        """Pydantic config."""
+
+        name: str = pydantic.Field(
+            ...,
+            description="Receiver protocol name. What protocols are supported (and what they are called) "
+            "may differ per provider.",
+            examples=["otlp_grpc", "otlp_http", "tempo_http"],
+        )
+
+        type: TransportProtocolType = pydantic.Field(
+            ...,
+            description="The transport protocol used by this receiver.",
+            examples=["http", "grpc"],
+        )
+
+
+class Receiver(pydantic.BaseModel):
+    """Specification of an active receiver."""
+
+    protocol: ProtocolType = pydantic.Field(..., description="Receiver protocol name and type.")
+    url: str = pydantic.Field(
+        ...,
+        description="""URL at which the receiver is reachable. If there's an ingress, it would be the external URL.
+        Otherwise, it would be the service's fqdn or internal IP.
+        If the protocol type is grpc, the url will not contain a scheme.""",
+        examples=[
+            "http://traefik_address:2331",
+            "https://traefik_address:2331",
+            "http://tempo_public_ip:2331",
+            "https://tempo_public_ip:2331",
+            "tempo_public_ip:2331",
+        ],
+    )
+
+
+class CosAgentRequirerUnitData(DatabagModel):  # noqa: D101
+    """Application databag model for the COS-agent requirer."""
+
+    receivers: List[Receiver] = pydantic.Field(
+        ...,
+        description="List of all receivers enabled on the tracing provider.",
+    )
+
+
 class COSAgentProvider(Object):
     """Integration endpoint wrapper for the provider side of the cos_agent interface."""
 
@@ -318,6 +600,7 @@ class COSAgentProvider(Object):
         log_slots: Optional[List[str]] = None,
         dashboard_dirs: Optional[List[str]] = None,
         refresh_events: Optional[List] = None,
+        tracing_protocols: Optional[List[str]] = None,
         *,
         scrape_configs: Optional[Union[List[dict], Callable]] = None,
     ):
@@ -336,6 +619,7 @@ class COSAgentProvider(Object):
                 in the form ["snap-name:slot", ...].
             dashboard_dirs: Directory where the dashboards are stored.
             refresh_events: List of events on which to refresh relation data.
+            tracing_protocols: List of protocols that the charm will be using for sending traces.
             scrape_configs: List of standard scrape_configs dicts or a callable
                 that returns the list in case the configs need to be generated dynamically.
                 The contents of this list will be merged with the contents of `metrics_endpoints`.
@@ -353,6 +637,7 @@ class COSAgentProvider(Object):
         self._log_slots = log_slots or []
         self._dashboard_dirs = dashboard_dirs
         self._refresh_events = refresh_events or [self._charm.on.config_changed]
+        self._tracing_protocols = tracing_protocols
 
         events = self._charm.on[relation_name]
         self.framework.observe(events.relation_joined, self._on_refresh)
@@ -377,6 +662,7 @@ class COSAgentProvider(Object):
                         dashboards=self._dashboards,
                         metrics_scrape_jobs=self._scrape_jobs,
                         log_slots=self._log_slots,
+                        tracing_protocols=self._tracing_protocols,
                     )
                     relation.data[self._charm.unit][data.KEY] = data.json()
                 except (
@@ -554,6 +840,31 @@ class COSAgentRequirer(Object):
         if not (provider_data := self._validated_provider_data(raw)):
             return
 
+        # write enabled receivers to cos-agent relation
+        try:
+            for relation in self._charm.model.relations[self._relation_name]:
+                CosAgentRequirerUnitData(
+                    # TODO is this a valid assumption that a principal charm will be able to reach a subordinate on localhost?
+                    receivers=[
+                        Receiver(url=f"localhost:{port}", protocol=protocol)
+                        for protocol, port in self.requested_protocols()
+                    ],
+                ).dump(relation.data[self._charm.unit])
+
+        except ModelError as e:
+            # args are bytes
+            msg = e.args[0]
+            if isinstance(msg, bytes):
+                if msg.startswith(
+                    b"ERROR cannot read relation application settings: permission denied"
+                ):
+                    logger.error(
+                        f"encountered error {e} while attempting to update_relation_data."
+                        f"The relation must be gone."
+                    )
+                    return
+            raise
+
         # Copy data from the cos_agent relation to the peer relation, so the leader could
         # follow up.
         # Save the originating unit name, so it could be used for topology later on by the leader.
@@ -585,6 +896,41 @@ class COSAgentRequirer(Object):
         """Trigger a refresh of relation data."""
         # FIXME: Figure out what we should do here
         self.on.data_changed.emit()  # pyright: ignore
+
+    def _get_requested_protocols(self, relation: Relation):
+        # Coherence check
+        units = relation.units
+        if len(units) > 1:
+            # should never happen
+            raise ValueError(
+                f"unexpected error: subordinate relation {relation} "
+                f"should have exactly one unit"
+            )
+
+        unit = next(iter(units))
+
+        if not unit:
+            return None
+
+        if not (raw := relation.data[unit].get(CosAgentProviderUnitData.KEY)):
+            return None
+
+        if not (provider_data := self._validated_provider_data(raw)):
+            return None
+
+        return provider_data.tracing_protocols
+
+    def requested_protocols(self):
+        """All receiver protocols that have been requested by our related apps."""
+        requested_protocols = set()
+        for relation in self._charm.model.relations[self._relation_name]:
+            try:
+                protocols = self._get_requested_protocols(relation)
+            except NotReadyError:
+                continue
+            if protocols:
+                requested_protocols.update(protocols)
+        return requested_protocols
 
     @property
     def _remote_data(self) -> List[Tuple[CosAgentProviderUnitData, JujuTopology]]:
