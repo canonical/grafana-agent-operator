@@ -61,3 +61,24 @@ def test_dashboard_deserialization_roundtrip():
     }
     data = CosAgentProviderUnitData(**raw)
     assert GrafanaDashboard(data.dashboards[0])._deserialize() == raw_dash
+
+
+def test_cos_agent_provider_tracing_protocols_are_passed():
+    data = CosAgentProviderUnitData(
+        metrics_alert_rules={},
+        log_alert_rules={},
+        metrics_scrape_jobs=[],
+        log_slots=[],
+        dashboards=[],
+        subordinate=True,
+        tracing_protocols=["otlp_grpc", "otlp_http"]
+    )
+    assert json.loads(data.json()) == {
+        "metrics_alert_rules": {},
+        "log_alert_rules": {},
+        "dashboards": [],
+        "metrics_scrape_jobs": [],
+        "log_slots": [],
+        "subordinate": True,
+        "tracing_protocols": ["otlp_grpc", "otlp_http"]
+    }
