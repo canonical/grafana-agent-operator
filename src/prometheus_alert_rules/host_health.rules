@@ -5,7 +5,7 @@ groups:
     expr: up < 1
     for: 5m
     labels:
-      severity: warning
+      severity: critical
     annotations:
       summary: Host '{{labels.instance}}' is down.
       description: >-
@@ -16,7 +16,7 @@ groups:
     expr: absent(up)
     for: 5m
     labels:
-      severity: warning
+      severity: critical
     annotations:
       summary: Metrics endpoint for host '{{labels.instance}}' is unreachable.
       description: >-
