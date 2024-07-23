@@ -71,7 +71,7 @@ def test_cos_agent_provider_tracing_protocols_are_passed():
         log_slots=[],
         dashboards=[],
         subordinate=True,
-        tracing_protocols=["otlp_grpc", "otlp_http"]
+        tracing_protocols=["otlp_grpc", "otlp_http"],
     )
     assert json.loads(data.json()) == {
         "metrics_alert_rules": {},
@@ -80,5 +80,5 @@ def test_cos_agent_provider_tracing_protocols_are_passed():
         "metrics_scrape_jobs": [],
         "log_slots": [],
         "subordinate": True,
-        "tracing_protocols": ["otlp_grpc", "otlp_http"]
+        "tracing_protocols": ["otlp_grpc", "otlp_http"],
     }

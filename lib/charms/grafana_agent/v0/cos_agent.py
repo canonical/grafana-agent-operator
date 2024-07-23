@@ -288,6 +288,22 @@ receiver_protocol_to_transport_protocol = {
     "otlp_http": TransportProtocolType.http,
 }
 
+_tracing_receivers_ports = {
+    # OTLP receiver: see
+    #   https://github.com/open-telemetry/opentelemetry-collector/tree/v0.96.0/receiver/otlpreceiver
+    "otlp_http": 4318,
+    "otlp_grpc": 4317,
+    # Jaeger receiver: see
+    #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/jaegerreceiver
+    "jaeger_grpc": 14250,
+    "jaeger_thrift_binary": 6832,
+    "jaeger_thrift_compact": 6831,
+    "jaeger_thrift_http": 14268,
+    # Zipkin receiver: see
+    #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/zipkinreceiver
+    "zipkin": 9411,
+}
+
 IngesterProtocol = Literal[
     "otlp_grpc", "otlp_http", "zipkin", "tempo", "jaeger_http_thrift", "jaeger_grpc"
 ]
@@ -314,7 +330,7 @@ class AmbiguousRelationUsageError(TracingError):
 
 
 # TODO we want to eventually use `DatabagModel` from cosl but it likely needs a move to common package first
-if int(pydantic.version.VERSION.split(".")[0]) < 2:
+if int(pydantic.version.VERSION.split(".")[0]) < 2:  # type: ignore
 
     class DatabagModel(pydantic.BaseModel):  # type: ignore
         """Base databag model."""
@@ -509,7 +525,7 @@ class CosAgentPeersUnitData(DatabagModel):
         return self.unit_name.split("/")[0]
 
 
-if int(pydantic.version.VERSION.split(".")[0]) < 2:
+if int(pydantic.version.VERSION.split(".")[0]) < 2:  # type: ignore
 
     class ProtocolType(pydantic.BaseModel):  # type: ignore
         """Protocol Type."""
@@ -844,10 +860,15 @@ class COSAgentRequirer(Object):
         try:
             for relation in self._charm.model.relations[self._relation_name]:
                 CosAgentRequirerUnitData(
-                    # TODO is this a valid assumption that a principal charm will be able to reach a subordinate on localhost?
                     receivers=[
-                        Receiver(url=f"localhost:{port}", protocol=protocol)
-                        for protocol, port in self.requested_protocols()
+                        Receiver(
+                            url=f"{self._get_receiver_url(protocol)}",
+                            protocol=ProtocolType(
+                                name=protocol,
+                                type=receiver_protocol_to_transport_protocol[protocol],
+                            ),
+                        )
+                        for protocol in self.requested_protocols()
                     ],
                 ).dump(relation.data[self._charm.unit])
 
@@ -931,6 +952,12 @@ class COSAgentRequirer(Object):
             if protocols:
                 requested_protocols.update(protocols)
         return requested_protocols
+
+    def _get_receiver_url(self, protocol: str):
+        # TODO is the assumption that the subordinate unit will always be reachable under localhost true?
+        if receiver_protocol_to_transport_protocol[protocol] == TransportProtocolType.grpc:
+            return f"localhost:{_tracing_receivers_ports[protocol]}"
+        return f"http://localhost:{_tracing_receivers_ports[protocol]}"
 
     @property
     def _remote_data(self) -> List[Tuple[CosAgentProviderUnitData, JujuTopology]]:

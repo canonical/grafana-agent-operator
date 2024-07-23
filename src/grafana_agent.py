@@ -621,7 +621,7 @@ class GrafanaAgentCharm(CharmBase):
         prometheus_endpoints: List[Dict[str, Any]] = self._remote_write.endpoints
 
         if self._cloud.prometheus_ready:
-            prometheus_endpoint = {"url": self._cloud.prometheus_url}
+            prometheus_endpoint: Dict[str, Any] = {"url": self._cloud.prometheus_url}
             if self._cloud.credentials:
                 prometheus_endpoint["basic_auth"] = {
                     "username": self._cloud.credentials.username,
@@ -657,7 +657,7 @@ class GrafanaAgentCharm(CharmBase):
             )
 
         if self._cloud.tempo_ready:
-            tempo_endpoint = {
+            tempo_endpoint: Dict[str, Any] = {
                 "endpoint": self._cloud.tempo_url,
             }
 
@@ -803,7 +803,13 @@ class GrafanaAgentCharm(CharmBase):
         if not self._tracing.is_ready():
             return {}
 
-        receivers = self._tracing.get_all_endpoints().receivers
+        all_endpoints = self._tracing.get_all_endpoints()
+
+        if not all_endpoints:
+            logger.warning("No tempo receivers enabled: grafana-agent cannot ingest traces.")
+            return {}
+
+        receivers = all_endpoints.receivers
         receivers_set = {receiver.protocol.name for receiver in receivers}
 
         # the below is copied verbatim from the tempo charm's config
