@@ -304,7 +304,7 @@ _tracing_receivers_ports = {
     "zipkin": 9411,
 }
 
-IngesterProtocol = Literal[
+ReceiverProtocol = Literal[
     "otlp_grpc", "otlp_http", "zipkin", "tempo", "jaeger_http_thrift", "jaeger_grpc"
 ]
 
@@ -654,6 +654,7 @@ class COSAgentProvider(Object):
         self._dashboard_dirs = dashboard_dirs
         self._refresh_events = refresh_events or [self._charm.on.config_changed]
         self._tracing_protocols = tracing_protocols
+        self._is_single_endpoint = charm.meta.relations[relation_name].limit == 1
 
         events = self._charm.on[relation_name]
         self.framework.observe(events.relation_joined, self._on_refresh)
@@ -742,6 +743,105 @@ class COSAgentProvider(Object):
                 dashboard = GrafanaDashboard._serialize(path.read_bytes())
                 dashboards.append(dashboard)
         return dashboards
+
+    @property
+    def relations(self) -> List[Relation]:
+        """The tracing relations associated with this endpoint."""
+        return self._charm.model.relations[self._relation_name]
+
+    @property
+    def _relation(self) -> Optional[Relation]:
+        """If this wraps a single endpoint, the relation bound to it, if any."""
+        if not self._is_single_endpoint:
+            objname = type(self).__name__
+            raise AmbiguousRelationUsageError(
+                f"This {objname} wraps a {self._relation_name} endpoint that has "
+                "limit != 1. We can't determine what relation, of the possibly many, you are "
+                f"talking about. Please pass a relation instance while calling {objname}, "
+                "or set limit=1 in the charm metadata."
+            )
+        relations = self.relations
+        return relations[0] if relations else None
+
+    def is_ready(self, relation: Optional[Relation] = None):
+        """Is this endpoint ready?"""
+        relation = relation or self._relation
+        if not relation:
+            logger.debug(f"no relation on {self._relation_name !r}: tracing not ready")
+            return False
+        if relation.data is None:
+            logger.error(f"relation data is None for {relation}")
+            return False
+        if not relation.app:
+            logger.error(f"{relation} event received but there is no relation.app")
+            return False
+        try:
+            unit = next(iter(relation.units), None)
+            if not unit:
+                return False
+            databag = dict(relation.data[unit])
+            CosAgentRequirerUnitData.load(databag)
+
+        except (json.JSONDecodeError, pydantic.ValidationError, DataValidationError):
+            logger.info(f"failed validating relation data for {relation}")
+            return False
+        return True
+
+    def get_all_endpoints(
+        self, relation: Optional[Relation] = None
+    ) -> Optional[CosAgentRequirerUnitData]:
+        """Unmarshalled relation data."""
+        relation = relation or self._relation
+        if not self.is_ready(relation):
+            return None
+        unit = next(iter(relation.units), None)
+        if not unit:
+            return None
+        return CosAgentRequirerUnitData.load(relation.data[unit])  # type: ignore
+
+    def _get_endpoint(
+        self, relation: Optional[Relation], protocol: ReceiverProtocol
+    ) -> Optional[str]:
+        unit_data = self.get_all_endpoints(relation)
+        if not unit_data:
+            return None
+        receivers: List[Receiver] = list(
+            filter(lambda i: i.protocol.name == protocol, unit_data.receivers)
+        )
+        if not receivers:
+            logger.error(f"no receiver found with protocol={protocol!r}")
+            return None
+        if len(receivers) > 1:
+            logger.error(
+                f"too many receivers with protocol={protocol!r}; using first one. Found: {receivers}"
+            )
+            return None
+
+        receiver = receivers[0]
+        return receiver.url
+
+    def get_endpoint(
+        self, protocol: ReceiverProtocol, relation: Optional[Relation] = None
+    ) -> Optional[str]:
+        """Receiver endpoint for the given protocol."""
+        endpoint = self._get_endpoint(relation or self._relation, protocol=protocol)
+        if not endpoint:
+            requested_protocols = set()
+            relations = [relation] if relation else self.relations
+            for relation in relations:
+                try:
+                    databag = CosAgentProviderUnitData.load(relation.data[self._charm.unit])
+                except DataValidationError:
+                    continue
+
+                if databag.tracing_protocols:
+                    requested_protocols.update(databag.tracing_protocols)
+
+            if protocol not in requested_protocols:
+                raise ProtocolNotRequestedError(protocol, relation)
+
+            return None
+        return endpoint
 
 
 class COSAgentDataChanged(EventBase):
