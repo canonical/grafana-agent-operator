@@ -653,6 +653,7 @@ class GrafanaAgentCharm(CharmBase):
                     # cit: While Tempo and the Agent both can ingest in multiple formats,
                     #  the Agent only exports in OTLP gRPC and HTTP.
                     "endpoint": self._tracing.get_endpoint("otlp_grpc"),
+                    "insecure": False if self.cert.enabled else True,
                 }
             )
 
