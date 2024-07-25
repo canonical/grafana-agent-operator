@@ -104,12 +104,13 @@ class GrafanaAgentCharm(CharmBase):
         # Jaeger receiver: see
         #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/jaegerreceiver
         "jaeger_grpc": 14250,
-        "jaeger_thrift_binary": 6832,
-        "jaeger_thrift_compact": 6831,
         "jaeger_thrift_http": 14268,
         # Zipkin receiver: see
         #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/zipkinreceiver
         "zipkin": 9411,
+        # Opencensus receiver: see
+        #   https://opencensus.io/service/components/collector/
+        "opencensus": 55678,
     }
 
     # Pairs of (incoming, [outgoing]) relation names. If any 'incoming' is joined without at least
@@ -369,6 +370,11 @@ class GrafanaAgentCharm(CharmBase):
     def logs_rules(self) -> Dict[str, Any]:
         """Return a list of logging rules."""
         raise NotImplementedError("Please override the logs_rules method")
+
+    @property
+    def requested_receivers(self) -> set:
+        """Return a list of requested tracing receivers."""
+        raise NotImplementedError("Please override the requested_receivers method")
 
     @property
     def dashboards(self) -> list:
@@ -804,16 +810,8 @@ class GrafanaAgentCharm(CharmBase):
         if not self._tracing.is_ready():
             return {}
 
-        all_endpoints = self._tracing.get_all_endpoints()
+        receivers_set = self.requested_receivers
 
-        if not all_endpoints:
-            logger.warning("No tempo receivers enabled: grafana-agent cannot ingest traces.")
-            return {}
-
-        receivers = all_endpoints.receivers
-        receivers_set = {receiver.protocol.name for receiver in receivers}
-
-        # the below is copied verbatim from the tempo charm's config
         if not receivers_set:
             logger.warning("No tempo receivers enabled: grafana-agent cannot ingest traces.")
             return {}
@@ -856,10 +854,6 @@ class GrafanaAgentCharm(CharmBase):
             jaeger_config["thrift_http"] = _receiver_config("jaeger_thrift_http")
         if "jaeger_grpc" in receivers_set:
             jaeger_config["grpc"] = _receiver_config("jaeger_grpc")
-        if "jaeger_thrift_binary" in receivers_set:
-            jaeger_config["thrift_binary"] = _receiver_config("jaeger_thrift_binary")
-        if "jaeger_thrift_compact" in receivers_set:
-            jaeger_config["thrift_compact"] = _receiver_config("jaeger_thrift_compact")
         if jaeger_config:
             config["jaeger"] = {"protocols": jaeger_config}
 

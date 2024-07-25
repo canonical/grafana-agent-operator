@@ -303,6 +303,11 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         return self._cos.logs_alerts
 
     @property
+    def requested_receivers(self) -> set:
+        """Return a list of requested tracing receivers."""
+        return self._cos.requested_protocols()
+
+    @property
     def dashboards(self) -> list:
         """Return a list of dashboards."""
         return self._cos.dashboards

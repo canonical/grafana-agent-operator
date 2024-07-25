@@ -286,6 +286,7 @@ receiver_protocol_to_transport_protocol = {
     "tempo_grpc": TransportProtocolType.grpc,
     "otlp_grpc": TransportProtocolType.grpc,
     "otlp_http": TransportProtocolType.http,
+    "jaeger_thrift_http": TransportProtocolType.http,
 }
 
 _tracing_receivers_ports = {
@@ -296,16 +297,17 @@ _tracing_receivers_ports = {
     # Jaeger receiver: see
     #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/jaegerreceiver
     "jaeger_grpc": 14250,
-    "jaeger_thrift_binary": 6832,
-    "jaeger_thrift_compact": 6831,
     "jaeger_thrift_http": 14268,
     # Zipkin receiver: see
     #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/zipkinreceiver
     "zipkin": 9411,
+    # Opencensus receiver: see
+    #   https://opencensus.io/service/components/collector/
+    "opencensus": 55678,
 }
 
 ReceiverProtocol = Literal[
-    "otlp_grpc", "otlp_http", "zipkin", "tempo", "jaeger_http_thrift", "jaeger_grpc"
+    "otlp_grpc", "otlp_http", "zipkin", "tempo", "jaeger_thrift_http", "jaeger_grpc", "opencensus"
 ]
 
 
@@ -1028,7 +1030,7 @@ class COSAgentRequirer(Object):
                 f"should have exactly one unit"
             )
 
-        unit = next(iter(units))
+        unit = next(iter(units), None)
 
         if not unit:
             return None
