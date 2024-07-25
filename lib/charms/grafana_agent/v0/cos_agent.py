@@ -263,7 +263,6 @@ logger = logging.getLogger(__name__)
 SnapEndpoint = namedtuple("SnapEndpoint", "owner, name")
 
 
-# TODO these seem like they shouldn't be here. We shouldn't also import from tracing, but maybe we could import from a common package?
 # Note: MutableMapping is imported from the typing module and not collections.abc
 # because subscripting collections.abc.MutableMapping was added in python 3.9, but
 # most of our charms are based on 20.04, which has python 3.8.
@@ -1056,10 +1055,18 @@ class COSAgentRequirer(Object):
         return requested_protocols
 
     def _get_receiver_url(self, protocol: str):
-        # TODO is the assumption that the subordinate unit will always be reachable under localhost true?
+        if (
+            hasattr(self._charm, "cert")
+            and hasattr(self._charm.cert, "enabled")
+            and self._charm.cert.enabled
+        ):
+            s = "s"
+        else:
+            s = ""
+        # the assumption is that a subordinate charm will always be accessible to its principal charm under localhost
         if receiver_protocol_to_transport_protocol[protocol] == TransportProtocolType.grpc:
             return f"localhost:{_tracing_receivers_ports[protocol]}"
-        return f"http://localhost:{_tracing_receivers_ports[protocol]}"
+        return f"http{s}://localhost:{_tracing_receivers_ports[protocol]}"
 
     @property
     def _remote_data(self) -> List[Tuple[CosAgentProviderUnitData, JujuTopology]]:
