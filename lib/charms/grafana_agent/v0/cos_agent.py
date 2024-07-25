@@ -1057,8 +1057,8 @@ class COSAgentRequirer(Object):
     def _get_receiver_url(self, protocol: str):
         if (
             hasattr(self._charm, "cert")
-            and hasattr(self._charm.cert, "enabled") # type: ignore
-            and self._charm.cert.enabled # type: ignore
+            and hasattr(self._charm.cert, "enabled")  # type: ignore
+            and self._charm.cert.enabled  # type: ignore
         ):
             s = "s"
         else:
