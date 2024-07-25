@@ -213,13 +213,17 @@ from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Dict, List, Optional, Set, Tuple, Union
 
-import pydantic
 from cosl import GrafanaDashboard, JujuTopology
 from cosl.rules import AlertRules
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
 from ops.model import Relation
 from ops.testing import CharmType
+
+try:
+    import pydantic.v1 as pydantic
+except ImportError:
+    import pydantic
 
 if TYPE_CHECKING:
     try:
@@ -234,9 +238,9 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 8
+LIBPATCH = 9
 
-PYDEPS = ["cosl", "pydantic < 2"]
+PYDEPS = ["cosl", "pydantic"]
 
 DEFAULT_RELATION_NAME = "cos-agent"
 DEFAULT_PEER_RELATION_NAME = "peers"
