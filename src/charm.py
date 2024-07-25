@@ -10,9 +10,9 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, get_args
 
-from charms.grafana_agent.v0.cos_agent import COSAgentRequirer
+from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, ReceiverProtocol
 from charms.operator_libs_linux.v2 import snap  # type: ignore
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
 from cosl import JujuTopology
@@ -305,7 +305,15 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     @property
     def requested_receivers(self) -> set:
         """Return a list of requested tracing receivers."""
-        return self._cos.requested_protocols()
+        protocols = self._cos.requested_protocols()
+        protocols.update(
+            [
+                receiver
+                for receiver in get_args(ReceiverProtocol)
+                if self.config.get(f"always_enable_{receiver}") is True
+            ]
+        )
+        return protocols
 
     @property
     def dashboards(self) -> list:
