@@ -879,17 +879,12 @@ class GrafanaAgentCharm(CharmBase):
             # pushing a config with an empty receivers section will cause gagent to error out
             return {}
 
-        actions = [
-            {"key": key, "action": "insert", "value": value}  # add tag unless present already
-            for key, value in self._instance_topology.items()
-        ]
         return {
             "configs": [
                 {
                     "name": "tempo",
                     "remote_write": endpoints.tempo,
                     "receivers": receivers,
-                    "attributes": {"actions": actions},
                 }
             ]
         }

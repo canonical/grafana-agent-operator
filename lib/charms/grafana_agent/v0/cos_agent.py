@@ -792,7 +792,7 @@ class COSAgentProvider(Object):
     ) -> Optional[CosAgentRequirerUnitData]:
         """Unmarshalled relation data."""
         relation = relation or self._relation
-        if not self.is_ready(relation):
+        if not relation or not self.is_ready(relation):
             return None
         unit = next(iter(relation.units), None)
         if not unit:
