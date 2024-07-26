@@ -10,7 +10,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, get_args
+from typing import Any, Dict, List, Optional, Set, Union, get_args
 
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, ReceiverProtocol
 from charms.operator_libs_linux.v2 import snap  # type: ignore
@@ -152,7 +152,7 @@ class GrafanaAgentServiceError(GrafanaAgentError):
     # these attrs are implemented on GrafanaAgentCharm
     tracing_endpoint="_charm_tracing_endpoint",
     server_cert="_server_cert",
-    extra_types=(COSAgentRequirer, GrafanaAgentCharm, JujuTopology, SnapFstab),
+    extra_types=(COSAgentRequirer, JujuTopology, SnapFstab),
 )
 class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     """Machine version of the Grafana Agent charm."""
@@ -303,15 +303,13 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         return self._cos.logs_alerts
 
     @property
-    def requested_receivers(self) -> set:
+    def requested_tracing_protocols(self) -> Set[ReceiverProtocol]:
         """Return a list of requested tracing receivers."""
         protocols = self._cos.requested_protocols()
         protocols.update(
-            [
-                receiver
-                for receiver in get_args(ReceiverProtocol)
-                if self.config.get(f"always_enable_{receiver}") is True
-            ]
+            receiver
+            for receiver in get_args(ReceiverProtocol)
+            if self.config.get(f"always_enable_{receiver}") is True
         )
         return protocols
 

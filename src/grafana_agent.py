@@ -372,7 +372,7 @@ class GrafanaAgentCharm(CharmBase):
         raise NotImplementedError("Please override the logs_rules method")
 
     @property
-    def requested_receivers(self) -> set:
+    def requested_tracing_protocols(self) -> set:
         """Return a list of requested tracing receivers."""
         raise NotImplementedError("Please override the requested_receivers method")
 
@@ -810,7 +810,7 @@ class GrafanaAgentCharm(CharmBase):
         if not self._tracing.is_ready():
             return {}
 
-        receivers_set = self.requested_receivers
+        receivers_set = self.requested_tracing_protocols
 
         if not receivers_set:
             logger.warning("No tempo receivers enabled: grafana-agent cannot ingest traces.")
