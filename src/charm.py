@@ -309,7 +309,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         protocols.update(
             receiver
             for receiver in get_args(ReceiverProtocol)
-            if self.config.get(f"always_enable_{receiver}") is True
+            if self.config.get(f"always_enable_{receiver}")
         )
         return protocols
 
