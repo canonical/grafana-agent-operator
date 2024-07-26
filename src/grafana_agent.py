@@ -184,7 +184,7 @@ class GrafanaAgentCharm(CharmBase):
             ],
         )
         self._charm_tracing_endpoint, self._server_cert = charm_tracing_config(
-            self._tracing, self._cert_path
+            self._tracing, self._ca_path
         )
 
         self._cloud = GrafanaCloudConfigRequirer(self)
