@@ -306,7 +306,7 @@ _tracing_receivers_ports = {
 }
 
 ReceiverProtocol = Literal[
-    "otlp_grpc", "otlp_http", "zipkin", "tempo", "jaeger_thrift_http", "jaeger_grpc", "opencensus"
+    "otlp_grpc", "otlp_http", "zipkin", "jaeger_thrift_http", "jaeger_grpc", "opencensus"
 ]
 
 
