@@ -56,13 +56,6 @@ DASHBOARDS_DEST_PATH = "grafana_dashboards"  # placeholder until we figure out t
 RulesMapping = namedtuple("RulesMapping", ["src", "dest"])
 
 
-@dataclass
-class _TLSEndpoints:
-    loki: List[Dict[str, Any]]
-    tempo: List[Dict[str, Any]]
-    prometheus: List[Dict[str, Any]]
-
-
 class GrafanaAgentReloadError(Exception):
     """Custom exception to indicate that grafana agent config couldn't be reloaded."""
 
@@ -618,8 +611,15 @@ class GrafanaAgentCharm(CharmBase):
         )  # noqa
         self._update_status()
 
-    def _endpoints_with_tls(self) -> _TLSEndpoints:
-        """Add TLS information to Prometheus, Loki and Tempo endpoints.
+    def _enhance_endpoints_with_tls(self, endpoints) -> List[Dict[str, Any]]:
+        for endpoint in endpoints:
+            endpoint["tls_config"] = {
+                "insecure_skip_verify": self.model.config.get("tls_insecure_skip_verify")
+            }
+        return endpoints
+
+    def _prometheus_endpoints_with_tls(self) -> List[Dict[str, Any]]:
+        """Add TLS information to Prometheus endpoints.
 
         Also, injects the grafana-cloud-integrator endpoints into those we get from juju relations.
         FIXME: these should be separate concerns.
@@ -634,7 +634,14 @@ class GrafanaAgentCharm(CharmBase):
                     "password": self._cloud.credentials.password,
                 }
             prometheus_endpoints.append(prometheus_endpoint)
+        return self._enhance_endpoints_with_tls(prometheus_endpoints)
 
+    def _loki_endpoints_with_tls(self) -> List[Dict[str, Any]]:
+        """Add TLS information to Loki endpoints.
+
+        Also, injects the grafana-cloud-integrator endpoints into those we get from juju relations.
+        FIXME: these should be separate concerns.
+        """
         loki_endpoints = self._loki_consumer.loki_endpoints
 
         if self._cloud.loki_ready:
@@ -651,6 +658,14 @@ class GrafanaAgentCharm(CharmBase):
                 }
             loki_endpoints.append(loki_endpoint)
 
+        return self._enhance_endpoints_with_tls(loki_endpoints)
+
+    def _tempo_endpoints_with_tls(self) -> List[Dict[str, Any]]:
+        """Add TLS information to Tempo endpoints.
+
+        Also, injects the grafana-cloud-integrator endpoints into those we get from juju relations.
+        FIXME: these should be separate concerns.
+        """
         tempo_endpoints = []
         if self._tracing.is_ready():
             tempo_endpoints.append(
@@ -674,14 +689,7 @@ class GrafanaAgentCharm(CharmBase):
                     "password": self._cloud.credentials.password,
                 }
             tempo_endpoints.append(tempo_endpoint)
-
-        for endpoint in prometheus_endpoints + loki_endpoints + tempo_endpoints:
-            endpoint["tls_config"] = {
-                "insecure_skip_verify": self.model.config.get("tls_insecure_skip_verify")
-            }
-        return _TLSEndpoints(
-            loki=loki_endpoints, prometheus=prometheus_endpoints, tempo=tempo_endpoints
-        )
+        return self._enhance_endpoints_with_tls(tempo_endpoints)
 
     def _cli_args(self) -> str:
         """Return the cli arguments to pass to agent.
@@ -701,8 +709,6 @@ class GrafanaAgentCharm(CharmBase):
         Returns:
             A yaml string with grafana agent config
         """
-        endpoints = self._endpoints_with_tls()
-
         config = {
             "server": self._server_config,
             "integrations": self._integrations_config,
@@ -716,7 +722,7 @@ class GrafanaAgentCharm(CharmBase):
                     {
                         "name": "agent_scraper",
                         "scrape_configs": self.metrics_jobs(),
-                        "remote_write": endpoints.prometheus,
+                        "remote_write": self._prometheus_endpoints_with_tls(),
                     }
                 ],
             },
@@ -752,7 +758,7 @@ class GrafanaAgentCharm(CharmBase):
         # Align the "job" name with those of prometheus_scrape
         job_name = f"juju_{juju_model}_{juju_model_uuid}_{juju_application}_self-monitoring"
 
-        endpoints = self._endpoints_with_tls()
+        endpoints = self._prometheus_endpoints_with_tls()
 
         conf = {
             "agent": {
@@ -795,7 +801,7 @@ class GrafanaAgentCharm(CharmBase):
                     },
                 ],
             },
-            "prometheus_remote_write": endpoints.prometheus,
+            "prometheus_remote_write": endpoints,
             **self._additional_integrations,
         }
         return conf
@@ -866,7 +872,7 @@ class GrafanaAgentCharm(CharmBase):
         Returns:
             a dict with the tracing config.
         """
-        endpoints = self._endpoints_with_tls()
+        endpoints = self._tempo_endpoints_with_tls()
         receivers = self._tracing_receivers
 
         if not receivers:
@@ -877,7 +883,7 @@ class GrafanaAgentCharm(CharmBase):
             "configs": [
                 {
                     "name": "tempo",
-                    "remote_write": endpoints.tempo,
+                    "remote_write": endpoints,
                     "receivers": receivers,
                 }
             ]
@@ -890,14 +896,14 @@ class GrafanaAgentCharm(CharmBase):
         Returns:
             a dict with Loki config
         """
-        endpoints = self._endpoints_with_tls()
+        endpoints = self._loki_endpoints_with_tls()
 
         configs = []
         if self._loki_consumer.loki_endpoints:
             configs.append(
                 {
                     "name": "push_api_server",
-                    "clients": endpoints.loki,
+                    "clients": endpoints,
                     "scrape_configs": [
                         {
                             "job_name": "loki",

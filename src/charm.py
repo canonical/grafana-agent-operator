@@ -421,11 +421,11 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     @property
     def _additional_log_configs(self) -> List[Dict[str, Any]]:
         """Additional logging configuration for machine charms."""
-        endpoints = self._endpoints_with_tls()
+        endpoints = self._loki_endpoints_with_tls()
         return [
             {
                 "name": "log_file_scraper",
-                "clients": endpoints.loki,
+                "clients": endpoints,
                 "scrape_configs": [
                     {
                         "job_name": "varlog",
