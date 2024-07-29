@@ -301,9 +301,7 @@ _tracing_receivers_ports = {
     "zipkin": 9411,
 }
 
-ReceiverProtocol = Literal[
-    "otlp_grpc", "otlp_http", "zipkin", "jaeger_thrift_http", "jaeger_grpc"
-]
+ReceiverProtocol = Literal["otlp_grpc", "otlp_http", "zipkin", "jaeger_thrift_http", "jaeger_grpc"]
 
 
 class TracingError(Exception):
