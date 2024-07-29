@@ -52,9 +52,3 @@ options:
       even if there is no integration currently requesting it.
     type: boolean
     default: false
-  always_enable_opencensus:
-    description: >
-      Force-enable the receiver for the 'opencensus' protocol in Grafana Agent, 
-      even if there is no integration currently requesting it.
-    type: boolean
-    default: false

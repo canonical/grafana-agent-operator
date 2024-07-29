@@ -101,9 +101,6 @@ class GrafanaAgentCharm(CharmBase):
         # Zipkin receiver: see
         #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/zipkinreceiver
         "zipkin": 9411,
-        # Opencensus receiver: see
-        #   https://opencensus.io/service/components/collector/
-        "opencensus": 55678,
     }
 
     # Pairs of (incoming, [outgoing]) relation names. If any 'incoming' is joined without at least
@@ -844,8 +841,6 @@ class GrafanaAgentCharm(CharmBase):
 
         if "zipkin" in receivers_set:
             config["zipkin"] = _receiver_config("zipkin")
-        if "opencensus" in receivers_set:
-            config["opencensus"] = _receiver_config("opencensus")
 
         otlp_config = {}
         if "otlp_http" in receivers_set:

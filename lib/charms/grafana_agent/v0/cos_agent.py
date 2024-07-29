@@ -280,7 +280,6 @@ class TransportProtocolType(str, enum.Enum):
 receiver_protocol_to_transport_protocol = {
     "zipkin": TransportProtocolType.http,
     "kafka": TransportProtocolType.http,
-    "opencensus": TransportProtocolType.http,
     "tempo_http": TransportProtocolType.http,
     "tempo_grpc": TransportProtocolType.grpc,
     "otlp_grpc": TransportProtocolType.grpc,
@@ -300,13 +299,10 @@ _tracing_receivers_ports = {
     # Zipkin receiver: see
     #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/zipkinreceiver
     "zipkin": 9411,
-    # Opencensus receiver: see
-    #   https://opencensus.io/service/components/collector/
-    "opencensus": 55678,
 }
 
 ReceiverProtocol = Literal[
-    "otlp_grpc", "otlp_http", "zipkin", "jaeger_thrift_http", "jaeger_grpc", "opencensus"
+    "otlp_grpc", "otlp_http", "zipkin", "jaeger_thrift_http", "jaeger_grpc"
 ]
 
 
