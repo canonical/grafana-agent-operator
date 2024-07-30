@@ -1291,3 +1291,67 @@ class COSAgentRequirer(Object):
                 )
 
         return dashboards
+
+
+def charm_tracing_config(
+    endpoint_requirer: COSAgentProvider, cert_path: Optional[Union[Path, str]]
+) -> Tuple[Optional[str], Optional[str]]:
+    """Utility function to determine the charm_tracing config you will likely want.
+
+    If no endpoint is provided:
+     disable charm tracing.
+    If https endpoint is provided but cert_path is not found on disk:
+     disable charm tracing.
+    If https endpoint is provided and cert_path is None:
+     ERROR
+    Else:
+     proceed with charm tracing (with or without tls, as appropriate)
+
+    Usage:
+      If you are using charm_tracing >= v1.9:
+    >>> from lib.charms.tempo_k8s.v1.charm_tracing import trace_charm
+    >>> from lib.charms.tempo_k8s.v0.cos_agent import charm_tracing_config
+    >>> @trace_charm(tracing_endpoint="my_endpoint", cert_path="cert_path")
+    >>> class MyCharm(...):
+    >>>     _cert_path = "/path/to/cert/on/charm/container.crt"
+    >>>     def __init__(self, ...):
+    >>>         self.cos_agent = COSAgentProvider(...)
+    >>>         self.my_endpoint, self.cert_path = charm_tracing_config(
+    ...             self.cos_agent, self._cert_path)
+
+      If you are using charm_tracing < v1.9:
+    >>> from lib.charms.tempo_k8s.v1.charm_tracing import trace_charm
+    >>> from lib.charms.tempo_k8s.v2.tracing import charm_tracing_config
+    >>> @trace_charm(tracing_endpoint="my_endpoint", cert_path="cert_path")
+    >>> class MyCharm(...):
+    >>>     _cert_path = "/path/to/cert/on/charm/container.crt"
+    >>>     def __init__(self, ...):
+    >>>         self.cos_agent = COSAgentProvider(...)
+    >>>         self.my_endpoint, self.cert_path = charm_tracing_config(
+    ...             self.cos_agent, self._cert_path)
+    >>>     @property
+    >>>     def my_endpoint(self):
+    >>>         return self._my_endpoint
+    >>>     @property
+    >>>     def cert_path(self):
+    >>>         return self._cert_path
+
+    """
+    if not endpoint_requirer.is_ready():
+        return None, None
+
+    endpoint = endpoint_requirer.get_endpoint("otlp_http")
+    if not endpoint:
+        return None, None
+
+    is_https = endpoint.startswith("https://")
+
+    if is_https:
+        if cert_path is None:
+            raise TracingError("Cannot send traces to an https endpoint without a certificate.")
+        if not Path(cert_path).exists():
+            # if endpoint is https BUT we don't have a server_cert yet:
+            # disable charm tracing until we do to prevent tls errors
+            return None, None
+        return endpoint, str(cert_path)
+    return endpoint, None
