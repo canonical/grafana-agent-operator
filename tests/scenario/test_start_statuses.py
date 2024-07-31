@@ -5,11 +5,10 @@ import inspect
 from pathlib import Path
 from unittest.mock import patch
 
+import charm
 import pytest
 import yaml
-from scenario import Context, State, SubordinateRelation
-
-import charm
+from scenario import Context, State
 
 CHARM_ROOT = Path(__file__).parent.parent.parent
 
@@ -32,7 +31,7 @@ def _subp_run_mock(*a, **kw):
 @pytest.fixture(autouse=True)
 def patch_all(placeholder_cfg_path):
     with patch("subprocess.run", _subp_run_mock), patch(
-            "grafana_agent.CONFIG_PATH", placeholder_cfg_path
+        "grafana_agent.CONFIG_PATH", placeholder_cfg_path
     ):
         yield
 
@@ -42,7 +41,7 @@ def charm_meta() -> dict:
     charm_source_path = Path(inspect.getfile(charm.GrafanaAgentMachineCharm))
     charm_root = charm_source_path.parent.parent
 
-    raw_meta = (charm_root / 'metadata').with_suffix(".yaml").read_text()
+    raw_meta = (charm_root / "metadata").with_suffix(".yaml").read_text()
     return yaml.safe_load(raw_meta)
 
 
@@ -64,9 +63,7 @@ def test_start_not_ready(charm_meta, vroot, placeholder_cfg_path):
             meta=charm_meta,
             charm_root=vroot,
         )
-        with ctx.manager(
-            state=State(), event="start"
-        ) as mgr:
+        with ctx.manager(state=State(), event="start") as mgr:
             assert not mgr.charm.is_ready
     assert mgr.output.unit_status == ("waiting", "waiting for agent to start")
 
