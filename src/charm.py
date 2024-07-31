@@ -173,8 +173,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         ],
     }
 
-
-
     def __init__(self, *args):
         super().__init__(*args)
         # technically, only one of 'cos-agent' and 'juju-info' are likely to ever be active at
