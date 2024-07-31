@@ -954,6 +954,33 @@ class COSAgentRequirer(Object):
 
         # write enabled receivers to cos-agent relation
         try:
+            self.update_tracing_receivers()
+        except ModelError:
+            raise
+
+        # Copy data from the cos_agent relation to the peer relation, so the leader could
+        # follow up.
+        # Save the originating unit name, so it could be used for topology later on by the leader.
+        data = CosAgentPeersUnitData(  # peer relation databag model
+            unit_name=event.unit.name,
+            relation_id=str(event.relation.id),
+            relation_name=event.relation.name,
+            metrics_alert_rules=provider_data.metrics_alert_rules,
+            log_alert_rules=provider_data.log_alert_rules,
+            dashboards=provider_data.dashboards,
+        )
+        self.peer_relation.data[self._charm.unit][
+            f"{CosAgentPeersUnitData.KEY}-{event.unit.name}"
+        ] = data.json()
+
+        # We can't easily tell if the data that was changed is limited to only the data
+        # that goes into peer relation (in which case, if this is not a leader unit, we wouldn't
+        # need to emit `on.data_changed`), so we're emitting `on.data_changed` either way.
+        self.on.data_changed.emit()  # pyright: ignore
+
+    def update_tracing_receivers(self):
+        """Updates the list of exposed tracing receivers in all relations."""
+        try:
             for relation in self._charm.model.relations[self._relation_name]:
                 CosAgentRequirerUnitData(
                     receivers=[
@@ -979,28 +1006,7 @@ class COSAgentRequirer(Object):
                         f"encountered error {e} while attempting to update_relation_data."
                         f"The relation must be gone."
                     )
-                    return
             raise
-
-        # Copy data from the cos_agent relation to the peer relation, so the leader could
-        # follow up.
-        # Save the originating unit name, so it could be used for topology later on by the leader.
-        data = CosAgentPeersUnitData(  # peer relation databag model
-            unit_name=event.unit.name,
-            relation_id=str(event.relation.id),
-            relation_name=event.relation.name,
-            metrics_alert_rules=provider_data.metrics_alert_rules,
-            log_alert_rules=provider_data.log_alert_rules,
-            dashboards=provider_data.dashboards,
-        )
-        self.peer_relation.data[self._charm.unit][
-            f"{CosAgentPeersUnitData.KEY}-{event.unit.name}"
-        ] = data.json()
-
-        # We can't easily tell if the data that was changed is limited to only the data
-        # that goes into peer relation (in which case, if this is not a leader unit, we wouldn't
-        # need to emit `on.data_changed`), so we're emitting `on.data_changed` either way.
-        self.on.data_changed.emit()  # pyright: ignore
 
     def _validated_provider_data(self, raw) -> Optional[CosAgentProviderUnitData]:
         try:
