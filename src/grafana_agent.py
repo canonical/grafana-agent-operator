@@ -84,6 +84,10 @@ class GrafanaAgentCharm(CharmBase):
     _key_path = "/tmp/agent/grafana-agent.key"
     _ca_path = "/usr/local/share/ca-certificates/grafana-agent-operator.crt"
     _ca_folder_path = "/usr/local/share/ca-certificates"
+    _snap_cert_path = "/var/snap/grafana-agent/common/grafana-agent.pem"
+    _snap_key_path = "/var/snap/grafana-agent/common/grafana-agent.key"
+    _snap_ca_path = "/var/snap/grafana-agent/common/grafana-agent-operator.crt"
+    _snap_folder_path = "/var/snap/grafana-agent/common/"
 
     # mapping from tempo-supported receivers to the receiver ports to be opened on the grafana-agent host
     # to ingest traces for them. Note that we 'support' more receivers here than tempo currently does, so
@@ -550,28 +554,21 @@ class GrafanaAgentCharm(CharmBase):
             self.write_file(self._cert_path, self.cert.cert)
             self.write_file(self._key_path, self.cert.key)
             self.write_file(self._ca_path, self.cert.ca)
+            if os.path.exists(self._snap_folder_path):
+                # copy cert files within the snap context as well until snap is able to connect to certificate files.
+                # ref: https://github.com/canonical/grafana-agent-snap/issues/71
+                self.write_file(self._snap_cert_path, self.cert.cert)
+                self.write_file(self._snap_key_path, self.cert.key)
+                self.write_file(self._snap_ca_path, self.cert.ca)
+
         else:
             # Delete TLS related files if they exist
-            try:
-                self.read_file(self._cert_path)
-            except (FileNotFoundError, PathError):
-                pass
-            else:
-                self.delete_file(self._cert_path)
-
-            try:
-                self.read_file(self._key_path)
-            except (FileNotFoundError, PathError):
-                pass
-            else:
-                self.delete_file(self._key_path)
-
-            try:
-                self.read_file(self._ca_path)
-            except (FileNotFoundError, PathError):
-                pass
-            else:
-                self.delete_file(self._ca_path)
+            self._delete_file_if_exists(self._cert_path)
+            self._delete_file_if_exists(self._key_path)
+            self._delete_file_if_exists(self._ca_path)
+            self._delete_file_if_exists(self._snap_cert_path)
+            self._delete_file_if_exists(self._snap_key_path)
+            self._delete_file_if_exists(self._snap_ca_path)
 
         config = self._generate_config()
 
@@ -599,6 +596,14 @@ class GrafanaAgentCharm(CharmBase):
             self.status.update_config = WaitingStatus(str(e))
 
         self.status.update_config = None
+
+    def _delete_file_if_exists(self, file_path):
+        try:
+            self.read_file(file_path)
+        except (FileNotFoundError, PathError):
+            pass
+        else:
+            self.delete_file(file_path)
 
     def _on_dashboard_status_changed(self, _event=None):
         """Re-initialize dashboards to forward."""
@@ -822,9 +827,9 @@ class GrafanaAgentCharm(CharmBase):
         if self.cert.enabled:
             base_receiver_config: Dict[str, Union[str, Dict]] = {
                 "tls": {
-                    "ca_file": str(self._ca_path),
-                    "cert_file": str(self._cert_path),
-                    "key_file": str(self._key_path),
+                    "ca_file": str(self._snap_ca_path),
+                    "cert_file": str(self._snap_cert_path),
+                    "key_file": str(self._snap_key_path),
                     "min_version": "",
                 }
             }
