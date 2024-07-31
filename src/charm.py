@@ -279,6 +279,8 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self._update_config()
         self._update_ca()
         self._update_status()
+        # most cases are already resolved within `grafana_agent` parent object, but we don't have the notion of
+        # tracing receivers in COS agent there so we need to update them separately.
         self._cos.update_tracing_receivers()
 
     @property
