@@ -209,6 +209,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm)
 import enum
 import json
 import logging
+import socket
 from collections import namedtuple
 from itertools import chain
 from pathlib import Path
@@ -1057,10 +1058,10 @@ class COSAgentRequirer(Object):
             s = "s"
         else:
             s = ""
-        # the assumption is that a subordinate charm will always be accessible to its principal charm under localhost
+        # the assumption is that a subordinate charm will always be accessible to its principal charm under its fqdn
         if receiver_protocol_to_transport_protocol[protocol] == TransportProtocolType.grpc:
-            return f"localhost:{_tracing_receivers_ports[protocol]}"
-        return f"http{s}://localhost:{_tracing_receivers_ports[protocol]}"
+            return f"{socket.getfqdn()}:{_tracing_receivers_ports[protocol]}"
+        return f"http{s}://{socket.getfqdn()}:{_tracing_receivers_ports[protocol]}"
 
     @property
     def _remote_data(self) -> List[Tuple[CosAgentProviderUnitData, JujuTopology]]:

@@ -55,7 +55,7 @@ GRAFANA_DASH = """
 def patch_all(placeholder_cfg_path):
     with patch("subprocess.run", MagicMock()), patch(
         "grafana_agent.CONFIG_PATH", placeholder_cfg_path
-    ):
+    ), patch("socket.getfqdn", return_value="localhost"):
         yield
 
 
