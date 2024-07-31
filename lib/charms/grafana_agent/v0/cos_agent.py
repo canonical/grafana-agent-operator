@@ -1006,6 +1006,7 @@ class COSAgentRequirer(Object):
                         f"encountered error {e} while attempting to update_relation_data."
                         f"The relation must be gone."
                     )
+                    return
             raise
 
     def _validated_provider_data(self, raw) -> Optional[CosAgentProviderUnitData]:
