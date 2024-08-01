@@ -753,7 +753,7 @@ class COSAgentProvider(Object):
             raise AmbiguousRelationUsageError(
                 f"This {objname} wraps a {self._relation_name} endpoint that has "
                 "limit != 1. We can't determine what relation, of the possibly many, you are "
-                f"talking about. Please pass a relation instance while calling {objname}, "
+                f"referring to. Please pass a relation instance while calling {objname}, "
                 "or set limit=1 in the charm metadata."
             )
         relations = self.relations
