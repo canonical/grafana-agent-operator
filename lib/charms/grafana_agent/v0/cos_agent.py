@@ -1057,7 +1057,7 @@ class COSAgentRequirer(Object):
     def _get_tracing_receiver_url(self, protocol: str):
         scheme = "http"
         try:
-            if self._charm.cert.available:
+            if self._charm.cert.available: # type: ignore
                 scheme = "https"
         # not only Grafana Agent can implement cos_agent. If the charm doesn't have the `cert` attribute
         # using our cert_handler, it won't have the `available` parameter. In this case, we pass and assume http.
@@ -1346,7 +1346,7 @@ def charm_tracing_config(
     if not endpoint_requirer.is_ready():
         return None, None
 
-    endpoint = endpoint_requirer.get_endpoint("otlp_http")
+    endpoint = endpoint_requirer.get_tracing_endpoint("otlp_http")
     if not endpoint:
         return None, None
 
