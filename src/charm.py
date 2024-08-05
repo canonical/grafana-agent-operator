@@ -315,7 +315,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     @property
     def requested_tracing_protocols(self) -> Set[ReceiverProtocol]:
         """Return a list of requested tracing receivers."""
-        protocols = self._cos.requested_protocols()
+        protocols = self._cos.requested_tracing_protocols()
         protocols.update(
             receiver
             for receiver in get_args(ReceiverProtocol)

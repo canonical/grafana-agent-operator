@@ -795,15 +795,13 @@ class COSAgentProvider(Object):
             return None
         return CosAgentRequirerUnitData.load(relation.data[unit])  # type: ignore
 
-    def _get_endpoint(
+    def _get_tracing_endpoint(
         self, relation: Optional[Relation], protocol: ReceiverProtocol
     ) -> Optional[str]:
         unit_data = self.get_all_endpoints(relation)
         if not unit_data:
             return None
-        receivers: List[Receiver] = list(
-            filter(lambda i: i.protocol.name == protocol, unit_data.receivers)
-        )
+        receivers: List[Receiver] = [i for i in unit_data.receivers if i.protocol.name == protocol]
         if not receivers:
             logger.error(f"no receiver found with protocol={protocol!r}")
             return None
@@ -816,11 +814,11 @@ class COSAgentProvider(Object):
         receiver = receivers[0]
         return receiver.url
 
-    def get_endpoint(
+    def get_tracing_endpoint(
         self, protocol: ReceiverProtocol, relation: Optional[Relation] = None
     ) -> Optional[str]:
         """Receiver endpoint for the given protocol."""
-        endpoint = self._get_endpoint(relation or self._relation, protocol=protocol)
+        endpoint = self._get_tracing_endpoint(relation or self._relation, protocol=protocol)
         if not endpoint:
             requested_protocols = set()
             relations = [relation] if relation else self.relations
@@ -985,13 +983,13 @@ class COSAgentRequirer(Object):
                 CosAgentRequirerUnitData(
                     receivers=[
                         Receiver(
-                            url=f"{self._get_receiver_url(protocol)}",
+                            url=f"{self._get_tracing_receiver_url(protocol)}",
                             protocol=ProtocolType(
                                 name=protocol,
                                 type=receiver_protocol_to_transport_protocol[protocol],
                             ),
                         )
-                        for protocol in self.requested_protocols()
+                        for protocol in self.requested_tracing_protocols()
                     ],
                 ).dump(relation.data[self._charm.unit])
 
@@ -1044,7 +1042,7 @@ class COSAgentRequirer(Object):
 
         return provider_data.tracing_protocols
 
-    def requested_protocols(self):
+    def requested_tracing_protocols(self):
         """All receiver protocols that have been requested by our related apps."""
         requested_protocols = set()
         for relation in self._charm.model.relations[self._relation_name]:
@@ -1056,19 +1054,19 @@ class COSAgentRequirer(Object):
                 requested_protocols.update(protocols)
         return requested_protocols
 
-    def _get_receiver_url(self, protocol: str):
-        if (
-            hasattr(self._charm, "cert")
-            and hasattr(self._charm.cert, "enabled")  # type: ignore
-            and self._charm.cert.enabled  # type: ignore
-        ):
-            s = "s"
-        else:
-            s = ""
+    def _get_tracing_receiver_url(self, protocol: str):
+        scheme = "http"
+        try:
+            if self._charm.cert.available:
+                scheme = "https"
+        # not only Grafana Agent can implement cos_agent. If the charm doesn't have the `cert` attribute
+        # using our cert_handler, it won't have the `available` parameter. In this case, we pass and assume http.
+        except AttributeError:
+            pass
         # the assumption is that a subordinate charm will always be accessible to its principal charm under its fqdn
         if receiver_protocol_to_transport_protocol[protocol] == TransportProtocolType.grpc:
             return f"{socket.getfqdn()}:{_tracing_receivers_ports[protocol]}"
-        return f"http{s}://{socket.getfqdn()}:{_tracing_receivers_ports[protocol]}"
+        return f"{scheme}://{socket.getfqdn()}:{_tracing_receivers_ports[protocol]}"
 
     @property
     def _remote_data(self) -> List[Tuple[CosAgentProviderUnitData, JujuTopology]]:
