@@ -192,7 +192,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.remove, self._on_remove)
-        self.framework.observe(self.cert.on.cert_changed, self._on_cert_changed)
 
     @property
     def snap(self):
@@ -276,9 +275,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
     def _on_cert_changed(self, event):
         """Event handler for cert change."""
-        self._update_config()
-        self._update_ca()
-        self._update_status()
+        super()._on_cert_changed(event)
         # most cases are already resolved within `grafana_agent` parent object, but we don't have the notion of
         # tracing receivers in COS agent there so we need to update them separately.
         self._cos.update_tracing_receivers()
