@@ -12,7 +12,14 @@ from juju.errors import JujuError
 from pytest_operator.plugin import OpsTest
 
 agent = SimpleNamespace(name="agent")
-hwo = SimpleNamespace(charm="hardware-observer", name="hwo")
+# TODO after https://github.com/canonical/grafana-agent-operator/issues/162: Unpin hwo from revision 70
+hwo = SimpleNamespace(
+    entity_url="hardware-observer",
+    application_name="hwo",
+    revision=70,
+    series="jammy",
+    channel="stable",
+)
 principal = SimpleNamespace(charm="ubuntu", name="principal")
 
 logger = logging.getLogger(__name__)
@@ -54,7 +61,7 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
     )
 
     # Hardware Observer
-    await ops_test.model.deploy(hwo.charm, application_name=hwo.name, series="jammy")
+    await ops_test.model.deploy(**vars(hwo))
 
     # Placeholder for o11y relations (otherwise grafana agent charm is in blocked status)
     await ops_test.model.deploy(
