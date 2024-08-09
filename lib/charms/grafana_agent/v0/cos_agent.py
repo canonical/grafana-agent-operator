@@ -253,7 +253,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 9
+LIBPATCH = 10
 
 PYDEPS = ["cosl", "pydantic"]
 
@@ -330,141 +330,67 @@ class AmbiguousRelationUsageError(TracingError):
 
 
 # TODO we want to eventually use `DatabagModel` from cosl but it likely needs a move to common package first
-if int(pydantic.version.VERSION.split(".")[0]) < 2:  # type: ignore
+class DatabagModel(pydantic.BaseModel):  # type: ignore
+    """Base databag model."""
 
-    class DatabagModel(pydantic.BaseModel):  # type: ignore
-        """Base databag model."""
-
-        class Config:
-            """Pydantic config."""
-
-            # ignore any extra fields in the databag
-            extra = "ignore"
-            """Ignore any extra fields in the databag."""
-            allow_population_by_field_name = True
-            """Allow instantiating this class by field name (instead of forcing alias)."""
-
-        _NEST_UNDER = None
-
-        @classmethod
-        def load(cls, databag: MutableMapping):
-            """Load this model from a Juju databag."""
-            if cls._NEST_UNDER:
-                return cls.parse_obj(json.loads(databag[cls._NEST_UNDER]))
-
-            try:
-                data = {
-                    k: json.loads(v)
-                    for k, v in databag.items()
-                    # Don't attempt to parse model-external values
-                    if k in {f.alias for f in cls.__fields__.values()}
-                }
-            except json.JSONDecodeError as e:
-                msg = f"invalid databag contents: expecting json. {databag}"
-                logger.error(msg)
-                raise DataValidationError(msg) from e
-
-            try:
-                return cls.parse_raw(json.dumps(data))  # type: ignore
-            except pydantic.ValidationError as e:
-                msg = f"failed to validate databag: {databag}"
-                logger.debug(msg, exc_info=True)
-                raise DataValidationError(msg) from e
-
-        def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
-            """Write the contents of this model to Juju databag.
-
-            :param databag: the databag to write the data to.
-            :param clear: ensure the databag is cleared before writing it.
-            """
-            if clear and databag:
-                databag.clear()
-
-            if databag is None:
-                databag = {}
-
-            if self._NEST_UNDER:
-                databag[self._NEST_UNDER] = self.json(by_alias=True)
-                return databag
-
-            dct = self.dict()
-            for key, field in self.__fields__.items():  # type: ignore
-                value = dct[key]
-                databag[field.alias or key] = json.dumps(value)
-
-            return databag
-
-else:
-    from pydantic import ConfigDict
-
-    class DatabagModel(pydantic.BaseModel):
-        """Base databag model."""
-
-        model_config = ConfigDict(
-            # ignore any extra fields in the databag
-            extra="ignore",
-            # Allow instantiating this class by field name (instead of forcing alias).
-            populate_by_name=True,
-            # Custom config key: whether to nest the whole datastructure (as json)
-            # under a field or spread it out at the toplevel.
-            _NEST_UNDER=None,  # type: ignore
-        )
+    class Config:
         """Pydantic config."""
 
-        @classmethod
-        def load(cls, databag: MutableMapping):
-            """Load this model from a Juju databag."""
-            nest_under = cls.model_config.get("_NEST_UNDER")  # type: ignore
-            if nest_under:
-                return cls.model_validate(json.loads(databag[nest_under]))  # type: ignore
+        # ignore any extra fields in the databag
+        extra = "ignore"
+        """Ignore any extra fields in the databag."""
+        allow_population_by_field_name = True
+        """Allow instantiating this class by field name (instead of forcing alias)."""
 
-            try:
-                data = {
-                    k: json.loads(v)
-                    for k, v in databag.items()
-                    # Don't attempt to parse model-external values
-                    if k in {(f.alias or n) for n, f in cls.__fields__.items()}
-                }
-            except json.JSONDecodeError as e:
-                msg = f"invalid databag contents: expecting json. {databag}"
-                logger.error(msg)
-                raise DataValidationError(msg) from e
+    _NEST_UNDER = None
 
-            try:
-                return cls.model_validate_json(json.dumps(data))  # type: ignore
-            except pydantic.ValidationError as e:
-                msg = f"failed to validate databag: {databag}"
-                logger.debug(msg, exc_info=True)
-                raise DataValidationError(msg) from e
+    @classmethod
+    def load(cls, databag: MutableMapping):
+        """Load this model from a Juju databag."""
+        if cls._NEST_UNDER:
+            return cls.parse_obj(json.loads(databag[cls._NEST_UNDER]))
 
-        def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
-            """Write the contents of this model to Juju databag.
+        try:
+            data = {
+                k: json.loads(v)
+                for k, v in databag.items()
+                # Don't attempt to parse model-external values
+                if k in {f.alias for f in cls.__fields__.values()}
+            }
+        except json.JSONDecodeError as e:
+            msg = f"invalid databag contents: expecting json. {databag}"
+            logger.error(msg)
+            raise DataValidationError(msg) from e
 
-            :param databag: the databag to write the data to.
-            :param clear: ensure the databag is cleared before writing it.
-            """
-            if clear and databag:
-                databag.clear()
+        try:
+            return cls.parse_raw(json.dumps(data))  # type: ignore
+        except pydantic.ValidationError as e:
+            msg = f"failed to validate databag: {databag}"
+            logger.debug(msg, exc_info=True)
+            raise DataValidationError(msg) from e
 
-            if databag is None:
-                databag = {}
-            nest_under = self.model_config.get("_NEST_UNDER")
-            if nest_under:
-                databag[nest_under] = self.model_dump_json(  # type: ignore
-                    by_alias=True,
-                    # skip keys whose values are default
-                    exclude_defaults=True,
-                )
-                return databag
+    def dump(self, databag: Optional[MutableMapping] = None, clear: bool = True):
+        """Write the contents of this model to Juju databag.
 
-            dct = self.model_dump()  # type: ignore
-            for key, field in self.model_fields.items():  # type: ignore
-                value = dct[key]
-                if value == field.default:
-                    continue
-                databag[field.alias or key] = json.dumps(value)
+        :param databag: the databag to write the data to.
+        :param clear: ensure the databag is cleared before writing it.
+        """
+        if clear and databag:
+            databag.clear()
 
+        if databag is None:
+            databag = {}
+
+        if self._NEST_UNDER:
+            databag[self._NEST_UNDER] = self.json(by_alias=True)
             return databag
+
+        dct = self.dict()
+        for key, field in self.__fields__.items():  # type: ignore
+            value = dct[key]
+            databag[field.alias or key] = json.dumps(value)
+
+        return databag
 
 
 class CosAgentProviderUnitData(DatabagModel):
@@ -525,53 +451,27 @@ class CosAgentPeersUnitData(DatabagModel):
         return self.unit_name.split("/")[0]
 
 
-if int(pydantic.version.VERSION.split(".")[0]) < 2:  # type: ignore
+class ProtocolType(pydantic.BaseModel):  # type: ignore
+    """Protocol Type."""
 
-    class ProtocolType(pydantic.BaseModel):  # type: ignore
-        """Protocol Type."""
-
-        class Config:
-            """Pydantic config."""
-
-            use_enum_values = True
-            """Allow serializing enum values."""
-
-        name: str = pydantic.Field(
-            ...,
-            description="Receiver protocol name. What protocols are supported (and what they are called) "
-            "may differ per provider.",
-            examples=["otlp_grpc", "otlp_http", "tempo_http"],
-        )
-
-        type: TransportProtocolType = pydantic.Field(
-            ...,
-            description="The transport protocol used by this receiver.",
-            examples=["http", "grpc"],
-        )
-
-else:
-
-    class ProtocolType(pydantic.BaseModel):
-        """Protocol Type."""
-
-        model_config = pydantic.ConfigDict(
-            # Allow serializing enum values.
-            use_enum_values=True
-        )
+    class Config:
         """Pydantic config."""
 
-        name: str = pydantic.Field(
-            ...,
-            description="Receiver protocol name. What protocols are supported (and what they are called) "
-            "may differ per provider.",
-            examples=["otlp_grpc", "otlp_http", "tempo_http"],
-        )
+        use_enum_values = True
+        """Allow serializing enum values."""
 
-        type: TransportProtocolType = pydantic.Field(
-            ...,
-            description="The transport protocol used by this receiver.",
-            examples=["http", "grpc"],
-        )
+    name: str = pydantic.Field(
+        ...,
+        description="Receiver protocol name. What protocols are supported (and what they are called) "
+        "may differ per provider.",
+        examples=["otlp_grpc", "otlp_http", "tempo_http"],
+    )
+
+    type: TransportProtocolType = pydantic.Field(
+        ...,
+        description="The transport protocol used by this receiver.",
+        examples=["http", "grpc"],
+    )
 
 
 class Receiver(pydantic.BaseModel):
