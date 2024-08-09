@@ -228,17 +228,13 @@ from typing import (
     Union,
 )
 
+import pydantic
 from cosl import GrafanaDashboard, JujuTopology
 from cosl.rules import AlertRules
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
 from ops.model import ModelError, Relation
 from ops.testing import CharmType
-
-try:
-    import pydantic.v1 as pydantic
-except ImportError:
-    import pydantic
 
 if TYPE_CHECKING:
     try:
@@ -253,7 +249,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 9
+LIBPATCH = 10
 
 PYDEPS = ["cosl", "pydantic"]
 
@@ -408,6 +404,7 @@ else:
             # Custom config key: whether to nest the whole datastructure (as json)
             # under a field or spread it out at the toplevel.
             _NEST_UNDER=None,  # type: ignore
+            arbitrary_types_allowed=True,
         )
         """Pydantic config."""
 
