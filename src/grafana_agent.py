@@ -11,7 +11,7 @@ import shutil
 import socket
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Union
 
 import yaml
 from charms.certificate_transfer_interface.v0.certificate_transfer import (
@@ -32,6 +32,7 @@ from charms.observability_libs.v0.cert_handler import CertHandler
 from charms.prometheus_k8s.v1.prometheus_remote_write import (
     PrometheusRemoteWriteConsumer,
 )
+from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer, charm_tracing_config
 from cosl import MandatoryRelationPairs
 from ops.charm import CharmBase
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
@@ -83,6 +84,28 @@ class GrafanaAgentCharm(CharmBase):
     _key_path = "/tmp/agent/grafana-agent.key"
     _ca_path = "/usr/local/share/ca-certificates/grafana-agent-operator.crt"
     _ca_folder_path = "/usr/local/share/ca-certificates"
+    _snap_cert_path = "/var/snap/grafana-agent/common/grafana-agent.pem"
+    _snap_key_path = "/var/snap/grafana-agent/common/grafana-agent.key"
+    _snap_ca_path = "/var/snap/grafana-agent/common/grafana-agent-operator.crt"
+    _snap_folder_path = "/var/snap/grafana-agent/common/"
+
+    # mapping from tempo-supported receivers to the receiver ports to be opened on the grafana-agent host
+    # to ingest traces for them. Note that we 'support' more receivers here than tempo currently does, so
+    # that if in the future we decide to enable the receivers in tempo, we don't need to make changes
+    # to grafana-agent.
+    _tracing_receivers_ports = {
+        # OTLP receiver: see
+        #   https://github.com/open-telemetry/opentelemetry-collector/tree/v0.96.0/receiver/otlpreceiver
+        "otlp_http": 4318,
+        "otlp_grpc": 4317,
+        # Jaeger receiver: see
+        #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/jaegerreceiver
+        "jaeger_grpc": 14250,
+        "jaeger_thrift_http": 14268,
+        # Zipkin receiver: see
+        #   https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/v0.96.0/receiver/zipkinreceiver
+        "zipkin": 9411,
+    }
 
     # Pairs of (incoming, [outgoing]) relation names. If any 'incoming' is joined without at least
     # one matching 'outgoing', the charm will block. Without any matching outgoing relation we may
@@ -147,8 +170,27 @@ class GrafanaAgentCharm(CharmBase):
         )
         self.framework.observe(self.cert.on.cert_changed, self._on_cert_changed)  # pyright: ignore
 
+        self._tracing = TracingEndpointRequirer(
+            self,
+            protocols=[
+                "otlp_http",  # for charm traces
+                "otlp_grpc",  # for forwarding workload traces
+            ],
+        )
+        self._charm_tracing_endpoint, self._server_cert = charm_tracing_config(
+            self._tracing, self._ca_path
+        )
+
         self._cloud = GrafanaCloudConfigRequirer(self)
 
+        self.framework.observe(
+            self._tracing.on.endpoint_changed,  # pyright: ignore
+            self.on_tracing_endpoint_changed,
+        )
+        self.framework.observe(
+            self._tracing.on.endpoint_removed,  # pyright: ignore
+            self.on_tracing_endpoint_removed,
+        )
         self.framework.observe(
             self._cloud.on.cloud_config_available,  # pyright: ignore
             self._on_cloud_config_available,
@@ -324,6 +366,11 @@ class GrafanaAgentCharm(CharmBase):
         raise NotImplementedError("Please override the logs_rules method")
 
     @property
+    def requested_tracing_protocols(self) -> set:
+        """Return a list of requested tracing receivers."""
+        raise NotImplementedError("Please override the requested_receivers method")
+
+    @property
     def dashboards(self) -> list:
         """Return a list of dashboards."""
         raise NotImplementedError("Please override the dashboards method")
@@ -427,6 +474,16 @@ class GrafanaAgentCharm(CharmBase):
         self._update_status()
         self._update_metrics_alerts()
 
+    def on_tracing_endpoint_changed(self, _event) -> None:
+        """Event handler for the tracing endpoint-changed event."""
+        self._update_config()
+        self._update_status()
+
+    def on_tracing_endpoint_removed(self, _event) -> None:
+        """Event handler for the tracing endpoint-removed event."""
+        self._update_config()
+        self._update_status()
+
     def _update_status(self, *_):
         """Determine the charm status based on relation health and grafana-agent service readiness.
 
@@ -472,6 +529,7 @@ class GrafanaAgentCharm(CharmBase):
         # to inform via the Active message that they are in fact missing ("soft" warning).
         cos_rels = {
             "send-remote-write",
+            "tracing",
             "logging-consumer",
             "grafana-dashboards-provider",
         }
@@ -496,28 +554,21 @@ class GrafanaAgentCharm(CharmBase):
             self.write_file(self._cert_path, self.cert.cert)
             self.write_file(self._key_path, self.cert.key)
             self.write_file(self._ca_path, self.cert.ca)
+            if os.path.exists(self._snap_folder_path):
+                # copy cert files within the snap context as well until snap is able to connect to certificate files.
+                # ref: https://github.com/canonical/grafana-agent-snap/issues/71
+                self.write_file(self._snap_cert_path, self.cert.cert)
+                self.write_file(self._snap_key_path, self.cert.key)
+                self.write_file(self._snap_ca_path, self.cert.ca)
+
         else:
             # Delete TLS related files if they exist
-            try:
-                self.read_file(self._cert_path)
-            except (FileNotFoundError, PathError):
-                pass
-            else:
-                self.delete_file(self._cert_path)
-
-            try:
-                self.read_file(self._key_path)
-            except (FileNotFoundError, PathError):
-                pass
-            else:
-                self.delete_file(self._key_path)
-
-            try:
-                self.read_file(self._ca_path)
-            except (FileNotFoundError, PathError):
-                pass
-            else:
-                self.delete_file(self._ca_path)
+            self._delete_file_if_exists(self._cert_path)
+            self._delete_file_if_exists(self._key_path)
+            self._delete_file_if_exists(self._ca_path)
+            self._delete_file_if_exists(self._snap_cert_path)
+            self._delete_file_if_exists(self._snap_key_path)
+            self._delete_file_if_exists(self._snap_ca_path)
 
         config = self._generate_config()
 
@@ -546,6 +597,14 @@ class GrafanaAgentCharm(CharmBase):
 
         self.status.update_config = None
 
+    def _delete_file_if_exists(self, file_path):
+        try:
+            self.read_file(file_path)
+        except (FileNotFoundError, PathError):
+            pass
+        else:
+            self.delete_file(file_path)
+
     def _on_dashboard_status_changed(self, _event=None):
         """Re-initialize dashboards to forward."""
         # TODO: add constructor arg for `inject_dropdowns=False` instead of 'private' method?
@@ -554,19 +613,37 @@ class GrafanaAgentCharm(CharmBase):
         )  # noqa
         self._update_status()
 
-    def _enrich_endpoints(self) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """Add TLS information to Prometheus and Loki endpoints."""
+    def _enhance_endpoints_with_tls(self, endpoints) -> List[Dict[str, Any]]:
+        for endpoint in endpoints:
+            endpoint["tls_config"] = {
+                "insecure_skip_verify": self.model.config.get("tls_insecure_skip_verify")
+            }
+        return endpoints
+
+    def _prometheus_endpoints_with_tls(self) -> List[Dict[str, Any]]:
+        """Add TLS information to Prometheus endpoints.
+
+        Also, injects the grafana-cloud-integrator endpoints into those we get from juju relations.
+        FIXME: these should be separate concerns.
+        """
         prometheus_endpoints: List[Dict[str, Any]] = self._remote_write.endpoints
 
         if self._cloud.prometheus_ready:
-            prometheus_endpoint = {"url": self._cloud.prometheus_url}
+            prometheus_endpoint: Dict[str, Any] = {"url": self._cloud.prometheus_url}
             if self._cloud.credentials:
                 prometheus_endpoint["basic_auth"] = {
                     "username": self._cloud.credentials.username,
                     "password": self._cloud.credentials.password,
                 }
             prometheus_endpoints.append(prometheus_endpoint)
+        return self._enhance_endpoints_with_tls(prometheus_endpoints)
 
+    def _loki_endpoints_with_tls(self) -> List[Dict[str, Any]]:
+        """Add TLS information to Loki endpoints.
+
+        Also, injects the grafana-cloud-integrator endpoints into those we get from juju relations.
+        FIXME: these should be separate concerns.
+        """
         loki_endpoints = self._loki_consumer.loki_endpoints
 
         if self._cloud.loki_ready:
@@ -583,11 +660,38 @@ class GrafanaAgentCharm(CharmBase):
                 }
             loki_endpoints.append(loki_endpoint)
 
-        for endpoint in prometheus_endpoints + loki_endpoints:
-            endpoint["tls_config"] = {
-                "insecure_skip_verify": self.model.config.get("tls_insecure_skip_verify")
+        return self._enhance_endpoints_with_tls(loki_endpoints)
+
+    def _tempo_endpoints_with_tls(self) -> List[Dict[str, Any]]:
+        """Add TLS information to Tempo endpoints.
+
+        Also, injects the grafana-cloud-integrator endpoints into those we get from juju relations.
+        FIXME: these should be separate concerns.
+        """
+        tempo_endpoints = []
+        if self._tracing.is_ready():
+            tempo_endpoints.append(
+                {
+                    # outgoing traces are all otlp/grpc
+                    # cit: While Tempo and the Agent both can ingest in multiple formats,
+                    #  the Agent only exports in OTLP gRPC and HTTP.
+                    "endpoint": self._tracing.get_endpoint("otlp_grpc"),
+                    "insecure": False if self.cert.enabled else True,
+                }
+            )
+
+        if self._cloud.tempo_ready:
+            tempo_endpoint: Dict[str, Any] = {
+                "endpoint": self._cloud.tempo_url,
             }
-        return prometheus_endpoints, loki_endpoints
+
+            if self._cloud.credentials:
+                tempo_endpoint["basic_auth"] = {
+                    "username": self._cloud.credentials.username,
+                    "password": self._cloud.credentials.password,
+                }
+            tempo_endpoints.append(tempo_endpoint)
+        return self._enhance_endpoints_with_tls(tempo_endpoints)
 
     def _cli_args(self) -> str:
         """Return the cli arguments to pass to agent.
@@ -607,8 +711,6 @@ class GrafanaAgentCharm(CharmBase):
         Returns:
             A yaml string with grafana agent config
         """
-        prometheus_endpoints, _ = self._enrich_endpoints()
-
         config = {
             "server": self._server_config,
             "integrations": self._integrations_config,
@@ -622,11 +724,12 @@ class GrafanaAgentCharm(CharmBase):
                     {
                         "name": "agent_scraper",
                         "scrape_configs": self.metrics_jobs(),
-                        "remote_write": prometheus_endpoints,
+                        "remote_write": self._prometheus_endpoints_with_tls(),
                     }
                 ],
             },
             "logs": self._loki_config,
+            "traces": self._tempo_config,
         }
         return config
 
@@ -657,7 +760,7 @@ class GrafanaAgentCharm(CharmBase):
         # Align the "job" name with those of prometheus_scrape
         job_name = f"juju_{juju_model}_{juju_model_uuid}_{juju_application}_self-monitoring"
 
-        prometheus_endpoints, _ = self._enrich_endpoints()
+        endpoints = self._prometheus_endpoints_with_tls()
 
         conf = {
             "agent": {
@@ -700,10 +803,91 @@ class GrafanaAgentCharm(CharmBase):
                     },
                 ],
             },
-            "prometheus_remote_write": prometheus_endpoints,
+            "prometheus_remote_write": endpoints,
             **self._additional_integrations,
         }
         return conf
+
+    @property
+    def _tracing_receivers(self) -> Dict[str, Union[Any, List[Any]]]:
+        """Receivers configuration for tracing.
+
+        Returns:
+            a dict with the receivers config.
+        """
+        if not self._tracing.is_ready():
+            return {}
+
+        receivers_set = self.requested_tracing_protocols
+
+        if not receivers_set:
+            logger.warning("No tempo receivers enabled: grafana-agent cannot ingest traces.")
+            return {}
+
+        if self.cert.enabled:
+            base_receiver_config: Dict[str, Union[str, Dict]] = {
+                "tls": {
+                    "ca_file": str(self._snap_ca_path),
+                    "cert_file": str(self._snap_cert_path),
+                    "key_file": str(self._snap_key_path),
+                    "min_version": "",
+                }
+            }
+        else:
+            base_receiver_config = {}
+
+        def _receiver_config(protocol: str):
+            endpoint = "0.0.0.0:" + str(self._tracing_receivers_ports[protocol])  # type: ignore
+            receiver_config = base_receiver_config.copy()
+            receiver_config["endpoint"] = endpoint
+            return receiver_config
+
+        config = {}
+
+        if "zipkin" in receivers_set:
+            config["zipkin"] = _receiver_config("zipkin")
+
+        otlp_config = {}
+        if "otlp_http" in receivers_set:
+            otlp_config["http"] = _receiver_config("otlp_http")
+        if "otlp_grpc" in receivers_set:
+            otlp_config["grpc"] = _receiver_config("otlp_grpc")
+        if otlp_config:
+            config["otlp"] = {"protocols": otlp_config}
+
+        jaeger_config = {}
+        if "jaeger_thrift_http" in receivers_set:
+            jaeger_config["thrift_http"] = _receiver_config("jaeger_thrift_http")
+        if "jaeger_grpc" in receivers_set:
+            jaeger_config["grpc"] = _receiver_config("jaeger_grpc")
+        if jaeger_config:
+            config["jaeger"] = {"protocols": jaeger_config}
+
+        return config
+
+    @property
+    def _tempo_config(self) -> Dict[str, Union[Any, List[Any]]]:
+        """The tracing section of the config.
+
+        Returns:
+            a dict with the tracing config.
+        """
+        endpoints = self._tempo_endpoints_with_tls()
+        receivers = self._tracing_receivers
+
+        if not receivers:
+            # pushing a config with an empty receivers section will cause gagent to error out
+            return {}
+
+        return {
+            "configs": [
+                {
+                    "name": "tempo",
+                    "remote_write": endpoints,
+                    "receivers": receivers,
+                }
+            ]
+        }
 
     @property
     def _loki_config(self) -> Dict[str, Union[Any, List[Any]]]:
@@ -712,14 +896,14 @@ class GrafanaAgentCharm(CharmBase):
         Returns:
             a dict with Loki config
         """
-        _, loki_endpoints = self._enrich_endpoints()
+        endpoints = self._loki_endpoints_with_tls()
 
         configs = []
         if self._loki_consumer.loki_endpoints:
             configs.append(
                 {
                     "name": "push_api_server",
-                    "clients": loki_endpoints,
+                    "clients": endpoints,
                     "scrape_configs": [
                         {
                             "job_name": "loki",

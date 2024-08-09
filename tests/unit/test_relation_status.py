@@ -69,9 +69,10 @@ class TestRelationStatus(unittest.TestCase):
 
         # THEN the charm keeps into active status
         self.assertIsInstance(self.harness.charm.unit.status, ActiveStatus)
-        self.assertEqual(
-            self.harness.charm.unit.status.message, "grafana-dashboards-provider: off"
+        self.assertTrue(
+            "grafana-dashboards-provider: off" in self.harness.charm.unit.status.message
         )
+        self.assertTrue("tracing: off" in self.harness.charm.unit.status.message)
 
     def test_juju_info_with_relations(self):
         # WHEN an incoming relation is added
