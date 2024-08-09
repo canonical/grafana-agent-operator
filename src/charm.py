@@ -538,8 +538,8 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             new_paths.append(p.stdout.strip())
         return new_paths
 
-    def _snap_plug_job(self, owner, source_path, target_path, app, unit, relabel_path):
-        job_name = f"{owner}-{source_path.replace('/', '-')}"
+    def _snap_plug_job(self, owner, target_path, app, unit, label_path):
+        job_name = f"{owner}-{label_path.replace('/', '-')}"
         job = {
             "job_name": job_name,
             "static_configs": [
@@ -573,10 +573,21 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             {
                 "source_labels": ["__path__"],
                 "target_label": "path",
-                "replacement": relabel_path,
+                "replacement": label_path,
             }
         ]
         return job
+
+    def _path_label(self, path):
+        """Best effort at figuring out what the path label should be."""
+        match = re.match("^.*(var/log/.*$)", path)
+        if match:
+            return match.group(1)
+        match = re.match("^/var/snap/.*/common/(.*)$", path)
+        if match:
+            return match.group(1)
+        # We couldn't figure it out so just use the full path.
+        return path
 
     @property
     def _snap_plugs_logging_configs(self) -> List[Dict[str, Any]]:
@@ -598,7 +609,11 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                 )
                 for path in log_dirs:
                     job = self._snap_plug_job(
-                        endpoint.owner, path, path, topology.application, topology.unit, path
+                        endpoint.owner,
+                        f"{path}/**",
+                        topology.application,
+                        topology.unit,
+                        self._path_label(path),
                     )
                     shared_logs_configs.append(job)
 
@@ -622,7 +637,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
                 job = self._snap_plug_job(
                     fstab_entry.owner,
-                    fstab_entry.endpoint_source,
                     target_path,
                     endpoint_owners[fstab_entry.owner]["juju_application"],
                     endpoint_owners[fstab_entry.owner]["juju_unit"],
