@@ -57,7 +57,7 @@ class GrafanaCloudConfigRequirer(Object):
 
     def _on_relation_broken(self, event):
         self.on.cloud_config_revoked.emit()  # pyright: ignore
-    
+
     def _is_not_empty(self, s):
         return bool(s and not s.isspace())
 
@@ -124,7 +124,7 @@ class GrafanaCloudConfigRequirer(Object):
         """Return the prometheus endpoint dict."""
         if not self.prometheus_ready:
             return {}
-        
+
         endpoint = {}
         endpoint["url"] = self.prometheus_url
         if self.credentials:
