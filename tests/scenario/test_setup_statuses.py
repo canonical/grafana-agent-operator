@@ -4,13 +4,13 @@ import dataclasses
 from typing import Type
 from unittest.mock import PropertyMock, patch
 
-import charm
-import grafana_agent
 import pytest
 from ops import UnknownStatus, WaitingStatus
 from ops.testing import CharmType
 from scenario import Context, State
 
+import charm
+import grafana_agent
 from tests.scenario.helpers import get_charm_meta
 
 
