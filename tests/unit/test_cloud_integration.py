@@ -29,56 +29,36 @@ class TestUpdateStatus(unittest.TestCase):
         self.mock_install = patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_prometheus_remote_write_config_with_grafana_cloud_integrator_on_leader(self):
-        """Asserts that the prometheus remote write config is written correctly when the charm is a leader."""
-        harness = Harness(GrafanaAgentCharm)
-        harness.set_model_name(self.__class__.__name__)
+    def test_prometheus_remote_write_config_with_grafana_cloud_integrator(self):
+        """Asserts that the prometheus remote write config is written correctly for leaders and non-leaders."""
+        for leader in (True, False):
+            with self.subTest(leader=leader):
+                harness = Harness(GrafanaAgentCharm)
+                harness.set_model_name(self.__class__.__name__)
+                harness.set_leader(True)
+                harness.begin_with_initial_hooks()
 
-        harness.set_leader(True)
-        harness.begin_with_initial_hooks()
+                # WHEN an incoming relation is added
+                rel_id = harness.add_relation("juju-info", "grafana-agent")
+                harness.add_relation_unit(rel_id, "grafana-agent/0")
 
-        self._subtest_prometheus_remote_write_config_with_grafana_cloud_integrator_on_leader(
-            harness
-        )
+                # THEN the charm goes into blocked status
+                assert isinstance(harness.charm.unit.status, BlockedStatus)
 
-    def test_prometheus_remote_write_config_with_grafana_cloud_integrator_on_non_leader(self):
-        """Asserts that the prometheus remote write config is written correctly when the charm is not a leader."""
-        harness = Harness(GrafanaAgentCharm)
-        harness.set_model_name(self.__class__.__name__)
+                # AND WHEN the necessary outgoing relations are added
+                harness.add_relation(
+                    "grafana-cloud-config",
+                    "grafana-cloud-integrator",
+                    app_data={"prometheus_url": "http://some.domain.name:9090/api/v1/write"},
+                )
 
-        harness.set_leader(False)
-        harness.begin_with_initial_hooks()
+                # THEN the charm goes into active status
+                assert isinstance(harness.charm.unit.status, ActiveStatus)
 
-        self._subtest_prometheus_remote_write_config_with_grafana_cloud_integrator_on_leader(
-            harness
-        )
-
-    def _subtest_prometheus_remote_write_config_with_grafana_cloud_integrator_on_leader(
-        self, harness
-    ):
-        """Helper for all shared code between prometheus_remote_write_config tests."""
-        # WHEN an incoming relation is added
-        rel_id = harness.add_relation("juju-info", "grafana-agent")
-        harness.add_relation_unit(rel_id, "grafana-agent/0")
-
-        # THEN the charm goes into blocked status
-        assert isinstance(harness.charm.unit.status, BlockedStatus)
-
-        # AND WHEN all the necessary outgoing relations are added
-        # for outgoing in ["send-remote-write", "logging-consumer"]:
-        harness.add_relation(
-            "grafana-cloud-config",
-            "grafana-cloud-integrator",
-            app_data={"prometheus_url": "http://some.domain.name:9090/api/v1/write"},
-        )
-
-        # THEN the charm goes into active status
-        assert isinstance(harness.charm.unit.status, ActiveStatus)
-
-        # THEN with the expected prometheus endpoint settings are written to the config file
-        config = yaml.safe_load(Path(self.config_path_mock).read_text())
-        assert len(config["integrations"]["prometheus_remote_write"]) == 1
-        assert (
-            config["integrations"]["prometheus_remote_write"][0]["url"]
-            == "http://some.domain.name:9090/api/v1/write"
-        )
+                # THEN with the expected prometheus endpoint settings are written to the config file
+                config = yaml.safe_load(Path(self.config_path_mock).read_text())
+                assert len(config["integrations"]["prometheus_remote_write"]) == 1
+                self.assertEqual(
+                    config["integrations"]["prometheus_remote_write"][0]["url"],
+                    "http://some.domain.name:9090/api/v1/write",
+                )
