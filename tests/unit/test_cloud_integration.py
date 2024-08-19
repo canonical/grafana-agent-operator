@@ -4,9 +4,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import yaml
-from charm import GrafanaAgentMachineCharm as GrafanaAgentCharm
 from ops import ActiveStatus, BlockedStatus
 from ops.testing import Harness
+
+from charm import GrafanaAgentMachineCharm as GrafanaAgentCharm
 
 
 class TestUpdateStatus(unittest.TestCase):
