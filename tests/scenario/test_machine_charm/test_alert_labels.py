@@ -4,10 +4,10 @@
 import json
 from unittest.mock import PropertyMock, patch
 
-import charm
 import pytest
 from scenario import Context, PeerRelation, Relation, State, SubordinateRelation
 
+import charm
 from tests.scenario.helpers import get_charm_meta
 
 
