@@ -13,6 +13,7 @@ Modified from https://github.com/canonical/k8s-operator/blob/main/charms/worker/
 
 import logging
 import platform
+import subprocess
 
 import charms.operator_libs_linux.v2.snap as snap_lib
 
@@ -26,8 +27,8 @@ _grafana_agent_snaps = {
     # (confinement, arch): revision
     ("strict", "amd64"): 51,  # 0.40.4
     ("strict", "arm64"): 52,  # 0.40.4
-    ("classic", "amd64"): 59,  # 0.40.4
-    ("classic", "arm64"): 60,  # 0.40.4
+    ("classic", "amd64"): 82,  # 0.40.4
+    ("classic", "arm64"): 83,  # 0.40.4
 }
 
 
@@ -65,7 +66,18 @@ def _install_snap(
         f"Ensuring {name} snap is installed at revision={revision}"
         f" with classic confinement={classic}"
     )
-    snap.ensure(state=snap_lib.SnapState.Present, revision=revision, classic=classic)
+    # snap.ensure(state=snap_lib.SnapState.Present, revision=revision, classic=classic)
+    # Currently, snap.ensure does not properly use the classic flag. Use the commented line above
+    # instead of the below code once the issue is resolved.
+    # https://github.com/canonical/operator-libs-linux/issues/129
+    if snap.present:
+        cmd = ["snap", "refresh", "grafana-agent", f'--revision="{revision}"']
+        if classic:
+            cmd.append("--classic")
+        subprocess.run(cmd)
+    else:
+        snap.ensure(state=snap_lib.SnapState.Present, revision=revision, classic=classic)
+
     snap.hold()
 
 

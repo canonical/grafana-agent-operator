@@ -236,7 +236,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         try:
             # install_ga_snap calls snap.ensure so it should do the right thing whether the track
             # changes or not.
-            install_ga_snap(classic=bool(self.model.config.get("classic_snap")))
+            install_ga_snap(classic=self.config.get("classic_snap", default=True))
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to refresh grafana-agent.") from e
 
@@ -248,7 +248,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Install/refresh the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
         try:
-            install_ga_snap(classic=bool(self.model.config.get("classic_snap")))
+            install_ga_snap(classic=self.config.get("classic_snap", default=True))
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 
@@ -573,7 +573,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             {
                 "source_labels": ["__path__"],
                 "target_label": "path",
-                "replacement": label_path,
+                "replacement": label_path if label_path.startswith("/") else f"/{label_path}",
             }
         ]
         return job
@@ -595,7 +595,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         agent_fstab = SnapFstab(Path("/var/lib/snapd/mount/snap.grafana-agent.fstab"))
         shared_logs_configs = []
 
-        if bool(self.model.config.get("classic_snap")):
+        if self.config.get("classic_snap", default=True):
             for endpoint, topology in self._cos.snap_log_endpoints_with_topology:
                 # endpoint: owner:name
                 with open(f"/snap/{endpoint.owner}/current/meta/snap.yaml") as f:
@@ -647,12 +647,15 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         return shared_logs_configs
 
     def _connect_logging_snap_endpoints(self):
-        for plug in self._cos.snap_log_endpoints:
-            try:
-                self.snap.connect("logs", service=plug.owner, slot=plug.name)
-            except snap.SnapError as e:
-                logger.error(f"error connecting plug {plug} to grafana-agent:logs")
-                logger.error(e.message)
+        # We need to run _verify_snap_track so we make sure we have refreshed BEFORE connecting.
+        self._verify_snap_track()
+        if not self.config.get("classic_snap", default=True):
+            for plug in self._cos.snap_log_endpoints:
+                try:
+                    self.snap.connect("logs", service=plug.owner, slot=plug.name)
+                except snap.SnapError as e:
+                    logger.error(f"error connecting plug {plug} to grafana-agent:logs")
+                    logger.error(e.message)
 
     def positions_dir(self) -> str:
         """Return the positions directory."""
