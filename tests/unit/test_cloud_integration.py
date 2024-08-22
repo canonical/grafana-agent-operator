@@ -30,6 +30,10 @@ class TestUpdateStatus(unittest.TestCase):
         self.mock_install = patcher.start()
         self.addCleanup(patcher.stop)
 
+        patcher = patch.object(GrafanaAgentCharm, "_verify_snap_track")
+        self.mock_verify_snap_track = patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_prometheus_remote_write_config_with_grafana_cloud_integrator(self):
         """Asserts that the prometheus remote write config is written correctly for leaders and non-leaders."""
         for leader in (True, False):
