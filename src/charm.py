@@ -236,7 +236,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         try:
             # install_ga_snap calls snap.ensure so it should do the right thing whether the track
             # changes or not.
-            install_ga_snap(classic=self.config.get("classic_snap", default=True))
+            install_ga_snap(classic=self.config["classic_snap"])  # type: ignore
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to refresh grafana-agent.") from e
 
@@ -248,7 +248,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Install/refresh the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
         try:
-            install_ga_snap(classic=self.config.get("classic_snap", default=True))
+            install_ga_snap(classic=self.config["classic_snap"])  # type: ignore
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 
@@ -595,11 +595,17 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         agent_fstab = SnapFstab(Path("/var/lib/snapd/mount/snap.grafana-agent.fstab"))
         shared_logs_configs = []
 
-        if self.config.get("classic_snap", default=True):
+        if self.config["classic_snap"]:
             for endpoint, topology in self._cos.snap_log_endpoints_with_topology:
                 # endpoint: owner:name
-                with open(f"/snap/{endpoint.owner}/current/meta/snap.yaml") as f:
-                    snap_yaml = yaml.safe_load(f)
+                try:
+                    with open(f"/snap/{endpoint.owner}/current/meta/snap.yaml") as f:
+                        snap_yaml = yaml.safe_load(f)
+                except FileNotFoundError:
+                    logger.error(
+                        f"snap file for {endpoint.owner} not found. It is likely not installed. Skipping."
+                    )
+                    continue
                 log_dirs = snap_yaml["slots"][endpoint.name]["source"]["read"]
                 for key in snap_yaml["apps"].keys():
                     snap_app_name = key  # Just use any app.
@@ -649,7 +655,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def _connect_logging_snap_endpoints(self):
         # We need to run _verify_snap_track so we make sure we have refreshed BEFORE connecting.
         self._verify_snap_track()
-        if not self.config.get("classic_snap", default=True):
+        if not self.config["classic_snap"]:
             for plug in self._cos.snap_log_endpoints:
                 try:
                     self.snap.connect("logs", service=plug.owner, slot=plug.name)

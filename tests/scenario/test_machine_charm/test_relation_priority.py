@@ -9,14 +9,12 @@ from cosl import GrafanaDashboard
 from scenario import Context, PeerRelation, State, SubordinateRelation
 
 import charm
-from tests.scenario.helpers import get_charm_meta
 from tests.scenario.test_machine_charm.helpers import set_run_out
 
 
 def trigger(evt: str, state: State, vroot: Path = None, **kwargs):
     context = Context(
         charm_type=charm.GrafanaAgentMachineCharm,
-        meta=get_charm_meta(charm.GrafanaAgentMachineCharm),
         charm_root=vroot,
     )
     return context.run(event=evt, state=state, **kwargs)
@@ -170,7 +168,6 @@ def test_both_relations(mock_run, vroot):
 
     context = Context(
         charm_type=charm.GrafanaAgentMachineCharm,
-        meta=get_charm_meta(charm.GrafanaAgentMachineCharm),
         charm_root=vroot,
     )
     state = State(
