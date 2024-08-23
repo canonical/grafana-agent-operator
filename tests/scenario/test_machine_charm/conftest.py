@@ -28,3 +28,14 @@ def mock_refresh():
     """Mock the refresh call so we don't access the host."""
     with patch("snap_management._install_snap", new_callable=PropertyMock):
         yield
+
+
+CONFIG_MATRIX = [
+    {"classic_snap": True},
+    {"classic_snap": False},
+]
+
+
+@pytest.fixture(params=CONFIG_MATRIX)
+def charm_config(request):
+    return request.param

@@ -32,7 +32,7 @@ def patch_all(placeholder_cfg_path):
 
 
 @patch("charm.subprocess.run")
-def test_no_relations(mock_run, vroot):
+def test_no_relations(mock_run, vroot, charm_config):
     def post_event(charm: charm.GrafanaAgentMachineCharm):
         assert not charm._cos.dashboards
         assert not charm._cos.logs_alerts
@@ -41,11 +41,11 @@ def test_no_relations(mock_run, vroot):
         assert not charm._cos.snap_log_endpoints
 
     set_run_out(mock_run, 0)
-    trigger("start", State(), post_event=post_event, vroot=vroot)
+    trigger("start", State(config=charm_config), post_event=post_event, vroot=vroot)
 
 
 @patch("charm.subprocess.run")
-def test_juju_info_relation(mock_run, vroot):
+def test_juju_info_relation(mock_run, vroot, charm_config):
     def post_event(charm: charm.GrafanaAgentMachineCharm):
         assert not charm._cos.dashboards
         assert not charm._cos.logs_alerts
@@ -61,7 +61,8 @@ def test_juju_info_relation(mock_run, vroot):
                 SubordinateRelation(
                     "juju-info", remote_unit_data={"config": json.dumps({"subordinate": True})}
                 )
-            ]
+            ],
+            config=charm_config,
         ),
         post_event=post_event,
         vroot=vroot,
@@ -69,7 +70,7 @@ def test_juju_info_relation(mock_run, vroot):
 
 
 @patch("charm.subprocess.run")
-def test_cos_machine_relation(mock_run, vroot):
+def test_cos_machine_relation(mock_run, vroot, charm_config):
     def post_event(charm: charm.GrafanaAgentMachineCharm):
         assert charm._cos.dashboards
         assert charm._cos.snap_log_endpoints
@@ -118,7 +119,8 @@ def test_cos_machine_relation(mock_run, vroot):
                     remote_unit_data=cos_agent_data,
                 ),
                 PeerRelation("peers", peers_data={1: peer_data}),
-            ]
+            ],
+            config=charm_config,
         ),
         post_event=post_event,
         vroot=vroot,
@@ -126,7 +128,7 @@ def test_cos_machine_relation(mock_run, vroot):
 
 
 @patch("charm.subprocess.run")
-def test_both_relations(mock_run, vroot):
+def test_both_relations(mock_run, vroot, charm_config):
     def post_event(charm: charm.GrafanaAgentMachineCharm):
         assert charm._cos.dashboards
         assert charm._cos.snap_log_endpoints
@@ -179,6 +181,7 @@ def test_both_relations(mock_run, vroot):
             ),
             SubordinateRelation("juju-info", remote_app_name="remote-juju-info"),
             PeerRelation("peers", peers_data={1: peer_data}),
-        ]
+        ],
+        config=charm_config,
     )
     context.run(event="start", state=state, post_event=post_event)

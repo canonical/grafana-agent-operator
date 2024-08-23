@@ -14,14 +14,14 @@ def test_cos_agent_receiver_protocols_match_with_tracing():
 
 @pytest.mark.parametrize("protocol", get_args(TracingReceiverProtocol))
 def test_always_enable_config_variables_are_generated_for_tracing_protocols(
-    protocol, vroot, mock_config_path
+    protocol, vroot, mock_config_path, charm_config
 ):
     context = Context(
         charm_type=GrafanaAgentMachineCharm,
         charm_root=vroot,
     )
     state = State(
-        config={f"always_enable_{protocol}": True},
+        config={f"always_enable_{protocol}": True, **charm_config},
         leader=True,
         relations=[],
     )

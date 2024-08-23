@@ -15,7 +15,7 @@ def use_mock_config_path(mock_config_path):
     yield
 
 
-def test_metrics_alert_rule_labels(vroot):
+def test_metrics_alert_rule_labels(vroot, charm_config):
     """Check that metrics alert rules are labeled with principal topology."""
     cos_agent_primary_data = {
         "config": json.dumps(
@@ -109,6 +109,7 @@ def test_metrics_alert_rule_labels(vroot):
             remote_write_relation,
             PeerRelation("peers"),
         ],
+        config=charm_config,
     )
 
     state_0 = context.run(event=cos_agent_primary_relation.changed_event, state=state)
