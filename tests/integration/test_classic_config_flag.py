@@ -76,7 +76,7 @@ async def test_switch_to_strict(ops_test: OpsTest):
     # grafana-agent.grafana-agent  enabled  active   -
     ops_test.model.applications[agent.name].set_config({"classic_snap": False})
     await ops_test.model.wait_for_idle(
-        apps=[principal.name, agent.name], status="active", idle_period=15
+        apps=[principal.name, agent.name], status="active", idle_period=300
     )
     out = await ssh(ops_test, agent.name, "snap info --verbose grafana-agent | grep confinement")
     assert out.split()[1] == "strict"
@@ -92,7 +92,7 @@ async def test_switch_to_classic(ops_test: OpsTest):
     # grafana-agent.grafana-agent  enabled  active   -
     ops_test.model.applications[agent.name].set_config({"classic_snap": True})
     await ops_test.model.wait_for_idle(
-        apps=[principal.name, agent.name], status="active", idle_period=15
+        apps=[principal.name, agent.name], status="active", idle_period=300
     )
     out = await ssh(ops_test, agent.name, "snap info --verbose grafana-agent | grep confinement")
     assert out.split()[1] == "classic"
