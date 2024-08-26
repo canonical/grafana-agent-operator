@@ -622,7 +622,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                         endpoint.owner,
                         f"{path}/**",
                         topology.application,
-                        topology.unit,
+                        str(topology.unit),
                         self._path_label(path),
                     )
                     shared_logs_configs.append(job)
