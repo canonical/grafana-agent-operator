@@ -540,7 +540,9 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             new_paths.append(p.stdout.strip())
         return new_paths
 
-    def _snap_plug_job(self, owner: str, target_path: str, app: str, unit: str, label_path: str) -> dict:
+    def _snap_plug_job(
+        self, owner: str, target_path: str, app: str, unit: str, label_path: str
+    ) -> dict:
         job_name = f"{owner}-{label_path.replace('/', '-')}"
         job = {
             "job_name": job_name,
