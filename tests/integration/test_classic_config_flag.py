@@ -49,8 +49,8 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
         channel="edge",
     )
 
-    await ops_test.model.add_relation("agent:juju-info", principal.name)
-    await ops_test.model.add_relation("agent:grafana-cloud-config", "gci")
+    await ops_test.model.integrate("agent:juju-info", principal.name)
+    await ops_test.model.integrate("agent:grafana-cloud-config", "gci")
     await ops_test.model.wait_for_idle(apps=[principal.name, agent.name], status="active")
 
 
