@@ -10,7 +10,6 @@
 Modified from https://github.com/canonical/k8s-operator/blob/main/charms/worker/k8s/src/snap.py
 """
 
-
 import logging
 import platform
 import subprocess

@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Common logic for both k8s and machine charms for Grafana Agent."""
+
 import json
 import logging
 import os

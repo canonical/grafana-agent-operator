@@ -4,6 +4,7 @@
 # See LICENSE file for licensing details.
 
 """A  juju charm for Grafana Agent on Kubernetes."""
+
 import logging
 import os
 import re
@@ -187,7 +188,8 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             self._on_cos_data_changed,
         )
         self.framework.observe(
-            self._cos.on.validation_error, self._on_cos_validation_error  # pyright: ignore
+            self._cos.on.validation_error,
+            self._on_cos_validation_error,  # pyright: ignore
         )
         self.framework.observe(self.on["juju_info"].relation_joined, self._on_juju_info_joined)
         self.framework.observe(self.on.install, self.on_install)
