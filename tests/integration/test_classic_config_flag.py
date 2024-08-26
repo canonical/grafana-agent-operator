@@ -74,9 +74,9 @@ async def test_switch_to_strict(ops_test: OpsTest):
     # $ juju ssh agent/0 snap services grafana-agent
     # Service                      Startup  Current  Notes
     # grafana-agent.grafana-agent  enabled  active   -
-    ops_test.model.applications[agent.name].set_config({"classic_snap": False})
+    await ops_test.model.applications[agent.name].set_config({"classic_snap": "false"})
     await ops_test.model.wait_for_idle(
-        apps=[principal.name, agent.name], status="active", idle_period=300
+        apps=[principal.name, agent.name], status="active"
     )
     out = await ssh(ops_test, agent.name, "snap info --verbose grafana-agent | grep confinement")
     assert out.split()[1] == "strict"
@@ -90,9 +90,9 @@ async def test_switch_to_classic(ops_test: OpsTest):
     # $ juju ssh agent/0 snap services grafana-agent
     # Service                      Startup  Current  Notes
     # grafana-agent.grafana-agent  enabled  active   -
-    ops_test.model.applications[agent.name].set_config({"classic_snap": True})
+    await ops_test.model.applications[agent.name].set_config({"classic_snap": "true"})
     await ops_test.model.wait_for_idle(
-        apps=[principal.name, agent.name], status="active", idle_period=300
+        apps=[principal.name, agent.name], status="active"
     )
     out = await ssh(ops_test, agent.name, "snap info --verbose grafana-agent | grep confinement")
     assert out.split()[1] == "classic"
