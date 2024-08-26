@@ -238,7 +238,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         try:
             # install_ga_snap calls snap.ensure so it should do the right thing whether the track
             # changes or not.
-            install_ga_snap(classic=self.config["classic_snap"])  # type: ignore
+            install_ga_snap(classic=bool(self.config["classic_snap"]))
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to refresh grafana-agent.") from e
 
@@ -250,7 +250,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Install/refresh the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
         try:
-            install_ga_snap(classic=self.config["classic_snap"])  # type: ignore
+            install_ga_snap(classic=bool(self.config["classic_snap"]))
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 
