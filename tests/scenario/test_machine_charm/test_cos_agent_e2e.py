@@ -55,7 +55,7 @@ GRAFANA_DASH = """
 def patch_all(placeholder_cfg_path):
     with patch("subprocess.run", MagicMock()), patch(
         "grafana_agent.CONFIG_PATH", placeholder_cfg_path
-    ):
+    ), patch("socket.getfqdn", return_value="localhost"):
         yield
 
 
@@ -112,6 +112,7 @@ def provider_charm():
                 logs_rules_dir="./src/alert_rules/loki",
                 log_slots=self._log_slots,
                 refresh_events=[self.on.cos_agent_relation_changed],
+                tracing_protocols=["otlp_grpc", "otlp_http"],
             )
 
     return MyPrincipal
@@ -160,6 +161,7 @@ def test_cos_agent_changed_no_remote_data(provider_ctx):
     assert len(config["dashboards"]) == 1
     assert len(config["metrics_scrape_jobs"]) == 1
     assert config["log_slots"] == ["charmed-kafka:logs"]
+    assert len(config["tracing_protocols"]) == 2
 
 
 def test_subordinate_update(requirer_ctx):
@@ -176,6 +178,7 @@ def test_subordinate_update(requirer_ctx):
             {"job_name": "mock-principal_0", "path": "/metrics", "port": "8080"}
         ],
         "log_slots": ["charmed-kafka:logs"],
+        "tracing_protocols": ["otlp_http", "otlp_grpc"],
     }
 
     cos_agent1 = SubordinateRelation(
@@ -198,6 +201,13 @@ def test_subordinate_update(requirer_ctx):
     assert peer_out_data["metrics_alert_rules"] == config["metrics_alert_rules"]
     assert peer_out_data["log_alert_rules"] == config["log_alert_rules"]
     assert peer_out_data["dashboards"] == config["dashboards"]
+
+    # check that requirer side of the databag contains expected receivers
+    receivers = json.loads(state_out1.get_relations("cos-agent")[0].local_unit_data["receivers"])
+    assert len(receivers) == 2
+    urls = [item["url"] for item in receivers]
+    assert "localhost:4317" in urls
+    assert "http://localhost:4318" in urls
 
 
 def test_cos_agent_wrong_rel_data(vroot, snap_is_installed, provider_ctx):

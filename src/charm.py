@@ -10,17 +10,17 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Set, Union, get_args
 
-from charms.grafana_agent.v0.cos_agent import COSAgentRequirer
+from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, ReceiverProtocol
 from charms.operator_libs_linux.v2 import snap  # type: ignore
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from cosl import JujuTopology
 from cosl.rules import AlertRules
-from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
+
+from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from snap_management import SnapSpecError, install_ga_snap
 
 logger = logging.getLogger(__name__)
@@ -150,9 +150,10 @@ class GrafanaAgentServiceError(GrafanaAgentError):
 
 
 @trace_charm(
-    tracing_endpoint="tracing_endpoint",
-    server_cert="server_cert_path",
-    extra_types=(COSAgentRequirer, GrafanaAgentCharm, JujuTopology, SnapFstab),
+    # these attrs are implemented on GrafanaAgentCharm
+    tracing_endpoint="_charm_tracing_endpoint",
+    server_cert="_server_cert",
+    extra_types=(COSAgentRequirer, JujuTopology, SnapFstab),
 )
 class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     """Machine version of the Grafana Agent charm."""
@@ -180,7 +181,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         # we always listen to juju-info-joined events even though one of the two paths will be
         # at all effects unused.
         self._cos = COSAgentRequirer(self)
-        self._tracing = TracingEndpointRequirer(self, protocols=["otlp_http"])
         self.framework.observe(
             self._cos.on.data_changed,  # pyright: ignore
             self._on_cos_data_changed,
@@ -274,6 +274,13 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         super()._on_upgrade_charm(event)
         self._install()
 
+    def _on_cert_changed(self, event):
+        """Event handler for cert change."""
+        super()._on_cert_changed(event)
+        # most cases are already resolved within `grafana_agent` parent object, but we don't have the notion of
+        # tracing receivers in COS agent there so we need to update them separately.
+        self._cos.update_tracing_receivers()
+
     @property
     def is_k8s(self) -> bool:
         """Is this a k8s charm."""
@@ -302,6 +309,17 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def logs_rules(self) -> Dict[str, Any]:
         """Return a list of logging rules."""
         return self._cos.logs_alerts
+
+    @property
+    def requested_tracing_protocols(self) -> Set[ReceiverProtocol]:
+        """Return a list of requested tracing receivers."""
+        protocols = self._cos.requested_tracing_protocols()
+        protocols.update(
+            receiver
+            for receiver in get_args(ReceiverProtocol)
+            if self.config.get(f"always_enable_{receiver}")
+        )
+        return protocols
 
     @property
     def dashboards(self) -> list:
@@ -411,11 +429,11 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     @property
     def _additional_log_configs(self) -> List[Dict[str, Any]]:
         """Additional logging configuration for machine charms."""
-        _, loki_endpoints = self._enrich_endpoints()
+        endpoints = self._loki_endpoints_with_tls()
         return [
             {
                 "name": "log_file_scraper",
-                "clients": loki_endpoints,
+                "clients": endpoints,
                 "scrape_configs": [
                     {
                         "job_name": "varlog",
@@ -562,18 +580,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def positions_dir(self) -> str:
         """Return the positions directory."""
         return "${SNAP_DATA}"
-
-    @property
-    def tracing_endpoint(self) -> Optional[str]:
-        """Otlp http endpoint for charm instrumentation."""
-        if self._tracing.is_ready():
-            return self._tracing.get_endpoint("otlp_http")
-        return None
-
-    @property
-    def server_cert_path(self) -> Optional[str]:
-        """Server certificate path for tls tracing."""
-        return self._cert_path
 
 
 if __name__ == "__main__":
