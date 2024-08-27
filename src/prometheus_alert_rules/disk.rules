@@ -29,17 +29,6 @@ groups:
         Host filesystem '{{ $labels.mountpoint }}' is using {{ $value | printf "%.0f" }}% of the total space.
           VALUE = {{ $value }}
           LABELS = {{ $labels }}
-  - alert: HostReadonlyFilesystem
-    expr: node_filesystem_readonly{mountpoint!~"/snap/.*|/sys/fs/cgroup/.*"} > 0
-    for: 0m
-    labels:
-      severity: warning
-    annotations:
-      summary: Host filesystem '{{ $labels.mountpoint }}' is readonly (instance {{ $labels.instance }})
-      description: >-
-        Host filesystem '{{ $labels.mountpoint }}' is readonly.
-          VALUE = {{ $value }}
-          LABELS = {{ $labels }}
   - alert: HostXFSError
     expr: node_filesystem_device_error{fstype="xfs"} > 0
     for: 0m
