@@ -122,13 +122,9 @@ def test_metrics_alert_rule_labels(vroot):
     )
 
     state_0 = context.run(event=cos_agent_primary_relation.changed_event, state=state)
-    (vroot / "metadata.yaml").unlink(missing_ok=True)
-    (vroot / "config.yaml").unlink(missing_ok=True)
-    (vroot / "actions.yaml").unlink(missing_ok=True)
+    (vroot / "charmcraft.yaml").unlink(missing_ok=True)
     state_1 = context.run(event=cos_agent_subordinate_relation.changed_event, state=state_0)
-    (vroot / "metadata.yaml").unlink(missing_ok=True)
-    (vroot / "config.yaml").unlink(missing_ok=True)
-    (vroot / "actions.yaml").unlink(missing_ok=True)
+    (vroot / "charmcraft.yaml").unlink(missing_ok=True)
     state_2 = context.run(event=remote_write_relation.joined_event, state=state_1)
 
     alert_rules = json.loads(state_2.relations[2].local_app_data["alert_rules"])

@@ -42,7 +42,7 @@ def charm_meta() -> dict:
     charm_source_path = Path(inspect.getfile(charm.GrafanaAgentMachineCharm))
     charm_root = charm_source_path.parent.parent
 
-    raw_meta = (charm_root / "metadata").with_suffix(".yaml").read_text()
+    raw_meta = (charm_root / "charmcraft").with_suffix(".yaml").read_text()
     return yaml.safe_load(raw_meta)
 
 
