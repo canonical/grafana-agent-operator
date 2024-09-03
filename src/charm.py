@@ -526,7 +526,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         ] + topology_relabels  # type: ignore
 
     def _evaluate_log_paths(self, paths: List[str], snap: str, app: str) -> List[str]:
-        """Evaluate each log path in order to deal with environment variables."""
+        """Evaluate each log path using snap to resolve environment variables."""
         # There is a potential for shell injection here. It seems okay because the potential
         # attacking charm has root access on the machine already anyway.
         new_paths = []
