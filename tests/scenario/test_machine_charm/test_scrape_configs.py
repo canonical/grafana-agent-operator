@@ -9,11 +9,12 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-import charm
 import pytest
 import yaml
 from charms.grafana_agent.v0.cos_agent import CosAgentProviderUnitData
 from scenario import Context, Model, PeerRelation, Relation, State, SubordinateRelation
+
+import charm
 
 machine_meta = yaml.safe_load(
     (
