@@ -415,7 +415,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         )
         return {
             "node_exporter": {
-                "rootfs_path": "/var/lib/snapd/hostfs" if bool(self.config["classic_snap"]) else "/",
+                "rootfs_path": "/" if bool(self.config["classic_snap"]) else "/var/lib/snapd/hostfs",
                 "enabled": True,
                 "enable_collectors": [
                     "logind",
