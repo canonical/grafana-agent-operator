@@ -605,8 +605,8 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         shared_logs_configs = []
 
         if self.config["classic_snap"]:
+            # Iterate through each logging endpoint.
             for endpoint, topology in self._cos.snap_log_endpoints_with_topology:
-                # endpoint: owner:name
                 try:
                     with open(f"/snap/{endpoint.owner}/current/meta/snap.yaml") as f:
                         snap_yaml = yaml.safe_load(f)
@@ -615,13 +615,16 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                         f"snap file for {endpoint.owner} not found. It is likely not installed. Skipping."
                     )
                     continue
+                # Get the directories we need to monitor.
                 log_dirs = snap_yaml["slots"][endpoint.name]["source"]["read"]
                 for key in snap_yaml["apps"].keys():
                     snap_app_name = key  # Just use any app.
                     break
+                # Evaluate any variables in the paths.
                 log_dirs = self._evaluate_log_paths(
                     paths=log_dirs, snap=endpoint.owner, app=snap_app_name
                 )
+                # Create a job for each path.
                 for path in log_dirs:
                     job = self._snap_plug_job(
                         endpoint.owner,
