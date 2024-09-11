@@ -584,7 +584,11 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         return job
 
     def _path_label(self, path):
-        """Best effort at figuring out what the path label should be."""
+        """Best effort at figuring out what the path label should be.
+
+        Try to make the path reflect what it would normally be with a non snap version of the
+        software.
+        """
         match = re.match("^.*(var/log/.*$)", path)
         if match:
             return match.group(1)
