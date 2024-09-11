@@ -196,7 +196,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.remove, self._on_remove)
-        self.framework.observe(self.on.config_changed, self.on_config_changed)
 
     @property
     def snap(self):
@@ -230,10 +229,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
         self._update_status()
 
-    def on_config_changed(self, _event) -> None:
-        """Handler for the config changed event."""
-        self._verify_snap_track()
-
     def _verify_snap_track(self) -> None:
         try:
             # install_ga_snap calls snap.ensure so it should do the right thing whether the track
@@ -261,7 +256,9 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.unit.status = MaintenanceStatus("Starting grafana-agent snap")
 
         try:
-            self.snap.start(enable=True)
+             # self.snap.start(enable=True)
+             subprocess.run(["snap", "enable", "grafana-agent"])
+             subprocess.run(["snap", "start", "grafana-agent"])
         except snap.SnapError as e:
             raise GrafanaAgentServiceError("Failed to start grafana-agent") from e
 
@@ -418,7 +415,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         )
         return {
             "node_exporter": {
-                "rootfs_path": "/var/lib/snapd/hostfs",
+                "rootfs_path": "/var/lib/snapd/hostfs" if bool(self.config["classic_snap"]) else "/",
                 "enabled": True,
                 "enable_collectors": [
                     "logind",

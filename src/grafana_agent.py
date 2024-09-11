@@ -271,6 +271,7 @@ class GrafanaAgentCharm(CharmBase):
 
     def _on_config_changed(self, _event=None):
         """Rebuild the config."""
+        self._verify_snap_track()
         self._update_config()
         self._update_status()
 
@@ -297,6 +298,9 @@ class GrafanaAgentCharm(CharmBase):
         self.run(["update-ca-certificates", "--fresh"])
 
     # Abstract Methods
+    def _verify_snap_track(self) -> None:
+        raise NotImplementedError("Please override the _verify_snap_track method")
+
     @property
     def is_k8s(self) -> bool:
         """Is this a k8s charm."""
