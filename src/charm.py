@@ -256,9 +256,9 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.unit.status = MaintenanceStatus("Starting grafana-agent snap")
 
         try:
-             # self.snap.start(enable=True)
-             subprocess.run(["snap", "enable", "grafana-agent"])
-             subprocess.run(["snap", "start", "grafana-agent"])
+            # self.snap.start(enable=True)
+            subprocess.run(["snap", "enable", "grafana-agent"])
+            subprocess.run(["snap", "start", "grafana-agent"])
         except snap.SnapError as e:
             raise GrafanaAgentServiceError("Failed to start grafana-agent") from e
 
@@ -415,7 +415,9 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         )
         return {
             "node_exporter": {
-                "rootfs_path": "/" if bool(self.config["classic_snap"]) else "/var/lib/snapd/hostfs",
+                "rootfs_path": "/"
+                if bool(self.config["classic_snap"])
+                else "/var/lib/snapd/hostfs",
                 "enabled": True,
                 "enable_collectors": [
                     "logind",
