@@ -70,10 +70,12 @@ def _install_snap(
     # instead of the below code once the issue is resolved.
     # https://github.com/canonical/operator-libs-linux/issues/129
     if snap.present:
-        cmd = ["snap", "refresh", "grafana-agent", f'--revision="{revision}"']
-        if classic:
-            cmd.append("--classic")
-        subprocess.run(cmd)
+        if snap.revision() != revision:
+            cmd = ["snap", "refresh", "grafana-agent", f'--revision="{revision}"']
+            if classic:
+                cmd.append("--classic")
+            subprocess.run(cmd)
+            snap.start(enable=True)
     else:
         snap.ensure(state=snap_lib.SnapState.Present, revision=revision, classic=classic)
 
