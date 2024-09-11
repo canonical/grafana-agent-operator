@@ -70,7 +70,7 @@ def _install_snap(
     # instead of the below code once the issue is resolved.
     # https://github.com/canonical/operator-libs-linux/issues/129
     if snap.present:
-        if snap.revision() != revision:
+        if snap.revision != revision:
             cmd = ["snap", "refresh", "grafana-agent", f'--revision="{revision}"']
             if classic:
                 cmd.append("--classic")
