@@ -30,6 +30,10 @@ class TestUpdateStatus(unittest.TestCase):
         self.mock_install = patcher.start()
         self.addCleanup(patcher.stop)
 
+        patcher = patch.object(GrafanaAgentCharm, "_verify_snap_track")
+        self.mock_verify_snap_track = patcher.start()
+        self.addCleanup(patcher.stop)
+
         self.harness = Harness(GrafanaAgentCharm)
         self.harness.set_model_name(self.__class__.__name__)
 
