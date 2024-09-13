@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Common logic for both k8s and machine charms for Grafana Agent."""
+
 import json
 import logging
 import os
@@ -270,6 +271,7 @@ class GrafanaAgentCharm(CharmBase):
 
     def _on_config_changed(self, _event=None):
         """Rebuild the config."""
+        self._verify_snap_track()
         self._update_config()
         self._update_status()
 
@@ -296,6 +298,9 @@ class GrafanaAgentCharm(CharmBase):
         self.run(["update-ca-certificates", "--fresh"])
 
     # Abstract Methods
+    def _verify_snap_track(self) -> None:
+        raise NotImplementedError("Please override the _verify_snap_track method")
+
     @property
     def is_k8s(self) -> bool:
         """Is this a k8s charm."""
@@ -608,9 +613,7 @@ class GrafanaAgentCharm(CharmBase):
     def _on_dashboard_status_changed(self, _event=None):
         """Re-initialize dashboards to forward."""
         # TODO: add constructor arg for `inject_dropdowns=False` instead of 'private' method?
-        self._grafana_dashboards_provider._reinitialize_dashboard_data(
-            inject_dropdowns=False
-        )  # noqa
+        self._grafana_dashboards_provider._reinitialize_dashboard_data(inject_dropdowns=False)  # noqa
         self._update_status()
 
     def _enhance_endpoints_with_tls(self, endpoints) -> List[Dict[str, Any]]:
@@ -922,12 +925,12 @@ class GrafanaAgentCharm(CharmBase):
             for config in configs:
                 for scrape_config in config.get("scrape_configs", []):
                     if scrape_config.get("loki_push_api"):
-                        scrape_config["loki_push_api"]["server"][
-                            "http_tls_config"
-                        ] = self.tls_config
-                        scrape_config["loki_push_api"]["server"][
-                            "grpc_tls_config"
-                        ] = self.tls_config
+                        scrape_config["loki_push_api"]["server"]["http_tls_config"] = (
+                            self.tls_config
+                        )
+                        scrape_config["loki_push_api"]["server"]["grpc_tls_config"] = (
+                            self.tls_config
+                        )
 
         configs.extend(self._additional_log_configs)  # type: ignore
         return (
