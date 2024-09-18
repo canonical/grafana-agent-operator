@@ -157,3 +157,4 @@ async def test_logs(ops_test: OpsTest):
             if static_config:
                 target_labels = static_config["labels"].keys()
                 assert topology_labels.issubset(target_labels)
+                assert "filename" not in target_labels
