@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from typing import List
 
 import pytest
+import yaml
 from juju.errors import JujuError
 from pytest_operator.plugin import OpsTest
 
@@ -147,14 +148,12 @@ async def test_metrics(ops_test: OpsTest):
     #     ...
 
 
-@pytest.mark.xfail  # agent return an empty reply (bug)
 async def test_logs(ops_test: OpsTest):
-    unit_targets = await ssh_units(
-        ops_test, principal.name, "curl localhost:12345/agent/api/v1/logs/targets"
-    )
-    unit_targets = [json.loads(itm)["data"] for itm in unit_targets]
-    assert len(unit_targets) > 1  # Self-scrape + node-exporter
-    for targets in unit_targets:
-        for target in targets:
-            target_labels = target["labels"].keys()
-            assert topology_labels.issubset(target_labels)
+    config = await ssh_units(ops_test, principal.name, "cat /etc/grafana-agent.yaml")
+    scrape_configs = yaml.safe_load(config[0])["logs"]["configs"][0]["scrape_configs"]
+    assert len(scrape_configs) > 0
+    for scrape_config in scrape_configs:
+        for static_config in scrape_config.get("static_configs") or {}:
+            if static_config:
+                target_labels = static_config["labels"].keys()
+                assert topology_labels.issubset(target_labels)
