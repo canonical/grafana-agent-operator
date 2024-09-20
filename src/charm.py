@@ -456,12 +456,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                                     "expression": ".*file is a directory.*",
                                 },
                             },
-                            {
-                                "structured_metadata": {"filename": "filename"},
-                            },
-                            {
-                                "labeldrop": ["filename"],
-                            },
                         ],
                         "static_configs": [
                             {
@@ -482,12 +476,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                                 "drop": {
                                     "expression": ".*file is a directory.*",
                                 },
-                            },
-                            {
-                                "structured_metadata": {"filename": "filename"},
-                            },
-                            {
-                                "labeldrop": ["filename"],
                             },
                         ],
                     },
