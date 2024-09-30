@@ -868,7 +868,6 @@ class GrafanaAgentCharm(CharmBase):
 
         return config
 
-
     @property
     def _tracing_sampling(self) -> Dict[str, Any]:
         return {
@@ -950,7 +949,6 @@ class GrafanaAgentCharm(CharmBase):
                 },
             ]
         }
-
 
     @property
     def _tempo_config(self) -> Dict[str, Union[Any, List[Any]]]:
