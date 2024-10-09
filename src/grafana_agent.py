@@ -32,7 +32,7 @@ from charms.observability_libs.v0.cert_handler import CertHandler
 from charms.prometheus_k8s.v1.prometheus_remote_write import (
     PrometheusRemoteWriteConsumer,
 )
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer, charm_tracing_config
+from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer, charm_tracing_config
 from cosl import MandatoryRelationPairs
 from ops.charm import CharmBase
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
