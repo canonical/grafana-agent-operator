@@ -5,7 +5,14 @@ import pytest
 import yaml
 from charms.grafana_agent.v0.cos_agent import ReceiverProtocol
 from charms.tempo_coordinator_k8s.v0.tracing import ReceiverProtocol as TracingReceiverProtocol
-from scenario import Context, State
+from scenario import Context, Relation, State, SubordinateRelation
+
+from charm import GrafanaAgentMachineCharm
+from lib.charms.grafana_agent.v0.cos_agent import (
+    CosAgentProviderUnitData,
+    Receiver,
+)
+from lib.charms.tempo_k8s.v2.tracing import TracingProviderAppData
 
 
 def test_cos_agent_receiver_protocols_match_with_tracing():
