@@ -594,9 +594,7 @@ class Receiver(pydantic.BaseModel):
     )
 
 
-class CosAgentRequirerUnitData(
-    DatabagModel
-):  # pyright: ignore [reportGeneralTypeIssues]  # noqa: D101
+class CosAgentRequirerUnitData(DatabagModel):  # pyright: ignore [reportGeneralTypeIssues]  # noqa: D101
     """Application databag model for the COS-agent requirer."""
 
     receivers: List[Receiver] = pydantic.Field(
