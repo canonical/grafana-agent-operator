@@ -4,11 +4,11 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-import charm
 import pytest
 from cosl import GrafanaDashboard
 from scenario import Context, PeerRelation, State, SubordinateRelation
 
+import charm
 from tests.scenario.helpers import get_charm_meta
 from tests.scenario.test_machine_charm.helpers import set_run_out
 

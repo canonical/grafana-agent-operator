@@ -1,10 +1,11 @@
 from typing import get_args
 
 import pytest
-from charm import GrafanaAgentMachineCharm
 from charms.grafana_agent.v0.cos_agent import ReceiverProtocol
 from charms.tempo_coordinator_k8s.v0.tracing import ReceiverProtocol as TracingReceiverProtocol
 from scenario import Context, State
+
+from charm import GrafanaAgentMachineCharm
 
 
 def test_cos_agent_receiver_protocols_match_with_tracing():

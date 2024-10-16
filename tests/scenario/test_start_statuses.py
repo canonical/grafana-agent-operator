@@ -5,10 +5,11 @@ import inspect
 from pathlib import Path
 from unittest.mock import patch
 
-import charm
 import pytest
 import yaml
 from scenario import Context, State
+
+import charm
 
 CHARM_ROOT = Path(__file__).parent.parent.parent
 

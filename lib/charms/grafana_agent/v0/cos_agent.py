@@ -231,10 +231,10 @@ from typing import (
 import pydantic
 from cosl import GrafanaDashboard, JujuTopology
 from cosl.rules import AlertRules
+from ops import CharmBase
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
 from ops.model import ModelError, Relation
-from ops.testing import CharmType
 
 if TYPE_CHECKING:
     try:
@@ -249,7 +249,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 10
+LIBPATCH = 11
 
 PYDEPS = ["cosl", "pydantic"]
 
@@ -464,7 +464,7 @@ else:
             return databag
 
 
-class CosAgentProviderUnitData(DatabagModel):
+class CosAgentProviderUnitData(DatabagModel):  # pyright: ignore [reportGeneralTypeIssues]
     """Unit databag model for `cos-agent` relation."""
 
     # The following entries are the same for all units of the same principal.
@@ -491,7 +491,7 @@ class CosAgentProviderUnitData(DatabagModel):
     KEY: ClassVar[str] = "config"
 
 
-class CosAgentPeersUnitData(DatabagModel):
+class CosAgentPeersUnitData(DatabagModel):  # pyright: ignore [reportGeneralTypeIssues]
     """Unit databag model for `peers` cos-agent machine charm peer relation."""
 
     # We need the principal unit name and relation metadata to be able to render identifiers
@@ -590,7 +590,9 @@ class Receiver(pydantic.BaseModel):
     )
 
 
-class CosAgentRequirerUnitData(DatabagModel):  # noqa: D101
+class CosAgentRequirerUnitData(
+    DatabagModel
+):  # pyright: ignore [reportGeneralTypeIssues]  # noqa: D101
     """Application databag model for the COS-agent requirer."""
 
     receivers: List[Receiver] = pydantic.Field(
@@ -604,7 +606,7 @@ class COSAgentProvider(Object):
 
     def __init__(
         self,
-        charm: CharmType,
+        charm: CharmBase,
         relation_name: str = DEFAULT_RELATION_NAME,
         metrics_endpoints: Optional[List["_MetricsEndpointDict"]] = None,
         metrics_rules_dir: str = "./src/prometheus_alert_rules",
@@ -873,7 +875,7 @@ class COSAgentRequirer(Object):
 
     def __init__(
         self,
-        charm: CharmType,
+        charm: CharmBase,
         *,
         relation_name: str = DEFAULT_RELATION_NAME,
         peer_relation_name: str = DEFAULT_PEER_RELATION_NAME,
