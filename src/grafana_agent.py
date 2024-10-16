@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Common logic for both k8s and machine charms for Grafana Agent."""
+
 import json
 import logging
 import os
@@ -270,6 +271,7 @@ class GrafanaAgentCharm(CharmBase):
 
     def _on_config_changed(self, _event=None):
         """Rebuild the config."""
+        self._verify_snap_track()
         self._update_config()
         self._update_status()
 
@@ -296,6 +298,9 @@ class GrafanaAgentCharm(CharmBase):
         self.run(["update-ca-certificates", "--fresh"])
 
     # Abstract Methods
+    def _verify_snap_track(self) -> None:
+        raise NotImplementedError("Please override the _verify_snap_track method")
+
     @property
     def is_k8s(self) -> bool:
         """Is this a k8s charm."""
@@ -608,9 +613,7 @@ class GrafanaAgentCharm(CharmBase):
     def _on_dashboard_status_changed(self, _event=None):
         """Re-initialize dashboards to forward."""
         # TODO: add constructor arg for `inject_dropdowns=False` instead of 'private' method?
-        self._grafana_dashboards_provider._reinitialize_dashboard_data(
-            inject_dropdowns=False
-        )  # noqa
+        self._grafana_dashboards_provider._reinitialize_dashboard_data(inject_dropdowns=False)  # noqa
         self._update_status()
 
     def _enhance_endpoints_with_tls(self, endpoints) -> List[Dict[str, Any]]:
@@ -866,6 +869,94 @@ class GrafanaAgentCharm(CharmBase):
         return config
 
     @property
+    def _tracing_sampling(self) -> Dict[str, Any]:
+        # policies, as defined by tail sampling processor definition:
+        # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/tailsamplingprocessor
+        # each of them is evaluated separately and processor decides whether to pass the trace through or not
+        # see the description of tail sampling processor above for the full decision tree
+        return {
+            "policies": [
+                {
+                    "name": "error-traces-policy",
+                    "type": "and",
+                    "and": {
+                        "and_sub_policy": [
+                            {
+                                "name": "trace-status-policy",
+                                "type": "status_code",
+                                "status_code": {"status_codes": ["ERROR"]},
+                                # status_code processor is using span_status property of spans within a trace
+                                # see https://opentelemetry.io/docs/concepts/signals/traces/#span-status for reference
+                            },
+                            {
+                                "name": "probabilistic-policy",
+                                "type": "probabilistic",
+                                "probabilistic": {
+                                    "sampling_percentage": self.config.get(
+                                        "tracing_sample_rate_error"
+                                    )
+                                },
+                            },
+                        ]
+                    },
+                },
+                {
+                    "name": "charm-traces-policy",
+                    "type": "and",
+                    "and": {
+                        "and_sub_policy": [
+                            {
+                                "name": "service-name-policy",
+                                "type": "string_attribute",
+                                "string_attribute": {
+                                    "key": "service.name",
+                                    "values": [".+-charm"],
+                                    "enabled_regex_matching": True,
+                                },
+                            },
+                            {
+                                "name": "probabilistic-policy",
+                                "type": "probabilistic",
+                                "probabilistic": {
+                                    "sampling_percentage": self.config.get(
+                                        "tracing_sample_rate_charm"
+                                    )
+                                },
+                            },
+                        ]
+                    },
+                },
+                {
+                    "name": "workload-traces-policy",
+                    "type": "and",
+                    "and": {
+                        "and_sub_policy": [
+                            {
+                                "name": "service-name-policy",
+                                "type": "string_attribute",
+                                "string_attribute": {
+                                    "key": "service.name",
+                                    "values": [".+-charm"],
+                                    "enabled_regex_matching": True,
+                                    "invert_match": True,
+                                },
+                            },
+                            {
+                                "name": "probabilistic-policy",
+                                "type": "probabilistic",
+                                "probabilistic": {
+                                    "sampling_percentage": self.config.get(
+                                        "tracing_sample_rate_workload"
+                                    )
+                                },
+                            },
+                        ]
+                    },
+                },
+            ]
+        }
+
+    @property
     def _tempo_config(self) -> Dict[str, Union[Any, List[Any]]]:
         """The tracing section of the config.
 
@@ -874,6 +965,7 @@ class GrafanaAgentCharm(CharmBase):
         """
         endpoints = self._tempo_endpoints_with_tls()
         receivers = self._tracing_receivers
+        sampling = self._tracing_sampling
 
         if not receivers:
             # pushing a config with an empty receivers section will cause gagent to error out
@@ -885,6 +977,7 @@ class GrafanaAgentCharm(CharmBase):
                     "name": "tempo",
                     "remote_write": endpoints,
                     "receivers": receivers,
+                    "tail_sampling": sampling,
                 }
             ]
         }
@@ -922,12 +1015,12 @@ class GrafanaAgentCharm(CharmBase):
             for config in configs:
                 for scrape_config in config.get("scrape_configs", []):
                     if scrape_config.get("loki_push_api"):
-                        scrape_config["loki_push_api"]["server"][
-                            "http_tls_config"
-                        ] = self.tls_config
-                        scrape_config["loki_push_api"]["server"][
-                            "grpc_tls_config"
-                        ] = self.tls_config
+                        scrape_config["loki_push_api"]["server"]["http_tls_config"] = (
+                            self.tls_config
+                        )
+                        scrape_config["loki_push_api"]["server"]["grpc_tls_config"] = (
+                            self.tls_config
+                        )
 
         configs.extend(self._additional_log_configs)  # type: ignore
         return (

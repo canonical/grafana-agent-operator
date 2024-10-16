@@ -80,10 +80,10 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
 @pytest.mark.abort_on_fail
 async def test_service(ops_test: OpsTest):
     # WHEN the charm is related to a principal over `juju-info`
-    await ops_test.model.add_relation("agent:juju-info", principal.name)
-    await ops_test.model.add_relation("hwo:general-info", principal.name)
-    await ops_test.model.add_relation("hwo:cos-agent", "agent:cos-agent")
-    await ops_test.model.add_relation("agent:grafana-cloud-config", "gci")
+    await ops_test.model.integrate("agent:juju-info", principal.name)
+    await ops_test.model.integrate("hwo:general-info", principal.name)
+    await ops_test.model.integrate("hwo:cos-agent", "agent:cos-agent")
+    await ops_test.model.integrate("agent:grafana-cloud-config", "gci")
     await ops_test.model.wait_for_idle(apps=[principal.name, agent.name], status="active")
 
     # THEN all units of the principal have the charm in 'enabled/active' state
