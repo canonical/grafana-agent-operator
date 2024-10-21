@@ -418,6 +418,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                 else "/var/lib/snapd/hostfs",
                 "enabled": True,
                 "enable_collectors": [
+                    "drm",
                     "logind",
                     "systemd",
                     "mountstats",
