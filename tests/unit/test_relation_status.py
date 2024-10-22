@@ -5,9 +5,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from charm import GrafanaAgentMachineCharm as GrafanaAgentCharm
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
+
+from charm import GrafanaAgentMachineCharm as GrafanaAgentCharm
 
 
 class TestRelationStatus(unittest.TestCase):
@@ -28,6 +29,10 @@ class TestRelationStatus(unittest.TestCase):
 
         patcher = patch.object(GrafanaAgentCharm, "_install")
         self.mock_install = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        patcher = patch.object(GrafanaAgentCharm, "_verify_snap_track")
+        self.mock_verify_snap_track = patcher.start()
         self.addCleanup(patcher.stop)
 
         self.harness = Harness(GrafanaAgentCharm)
@@ -69,9 +74,10 @@ class TestRelationStatus(unittest.TestCase):
 
         # THEN the charm keeps into active status
         self.assertIsInstance(self.harness.charm.unit.status, ActiveStatus)
-        self.assertEqual(
-            self.harness.charm.unit.status.message, "grafana-dashboards-provider: off"
+        self.assertTrue(
+            "grafana-dashboards-provider: off" in self.harness.charm.unit.status.message
         )
+        self.assertTrue("tracing: off" in self.harness.charm.unit.status.message)
 
     def test_juju_info_with_relations(self):
         # WHEN an incoming relation is added
