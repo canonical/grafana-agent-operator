@@ -7,7 +7,7 @@ groups:
     labels:
       severity: critical
     annotations:
-      summary: Host '{{labels.instance}}' is down.
+      summary: Host '{{ $labels.instance }}' is down.
       description: >-
         Host '{{ $labels.instance }}' is down.
           VALUE = {{ $value }}
@@ -18,7 +18,7 @@ groups:
     labels:
       severity: critical
     annotations:
-      summary: Metrics not received from host '{{labels.instance}}'.
+      summary: Metrics not received from host '{{ $labels.instance }}'.
       description: >-
         The metrics endpoint for host '{{ $labels.instance }}' is unreachable.
           VALUE = {{ $value }}
