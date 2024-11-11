@@ -8,3 +8,13 @@ __pycache__/
 .idea/
 tests/integration/*-tester/lib/
 .env
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+crash.log
+.terraform/
+terraform.tfvars
+terraform.tfvars.json
