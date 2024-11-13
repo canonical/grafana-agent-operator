@@ -233,7 +233,10 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         try:
             # install_ga_snap calls snap.ensure so it should do the right thing whether the track
             # changes or not.
-            install_ga_snap(classic=bool(self.config["classic_snap"]), config={"reporting-enabled": "1" if self.config["reporting_enabled"] else "0"})
+            install_ga_snap(
+                classic=bool(self.config["classic_snap"]),
+                config={"reporting-enabled": "1" if self.config["reporting_enabled"] else "0"},
+            )
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to refresh grafana-agent.") from e
 
