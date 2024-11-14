@@ -89,6 +89,7 @@ class GrafanaAgentCharm(CharmBase):
     _snap_key_path = "/var/snap/grafana-agent/common/grafana-agent.key"
     _snap_ca_path = "/var/snap/grafana-agent/common/grafana-agent-operator.crt"
     _snap_folder_path = "/var/snap/grafana-agent/common/"
+    _cloud_ca_path = "/usr/local/share/ca-certificates/cloud-integrator.crt"
 
     # mapping from tempo-supported receivers to the receiver ports to be opened on the grafana-agent host
     # to ingest traces for them. Note that we 'support' more receivers here than tempo currently does, so
@@ -277,6 +278,12 @@ class GrafanaAgentCharm(CharmBase):
 
     def _on_cloud_config_available(self, _) -> None:
         logger.info("cloud config available")
+        # Write CA from cloud config
+        if self._cloud.tls_ca_ready:
+            self.write_file(self._cloud_ca_path, self._cloud.tls_ca)
+        else:
+            self._delete_file_if_exists(self._cloud_ca_path)
+        self.run(["update-ca-certificates", "--fresh"])
         self._update_config()
 
     def _on_cloud_config_revoked(self, _) -> None:
@@ -565,7 +572,6 @@ class GrafanaAgentCharm(CharmBase):
                 self.write_file(self._snap_cert_path, self.cert.cert)
                 self.write_file(self._snap_key_path, self.cert.key)
                 self.write_file(self._snap_ca_path, self.cert.ca)
-
         else:
             # Delete TLS related files if they exist
             self._delete_file_if_exists(self._cert_path)
@@ -992,7 +998,7 @@ class GrafanaAgentCharm(CharmBase):
         endpoints = self._loki_endpoints_with_tls()
 
         configs = []
-        if self._loki_consumer.loki_endpoints:
+        if self._loki_consumer.loki_endpoints or self._cloud.loki_ready:
             configs.append(
                 {
                     "name": "push_api_server",

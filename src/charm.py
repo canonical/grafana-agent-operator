@@ -19,10 +19,9 @@ from charms.operator_libs_linux.v2 import snap  # type: ignore
 from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
 from cosl import JujuTopology
 from cosl.rules import AlertRules
+from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
-
-from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from snap_management import SnapSpecError, install_ga_snap
 
 logger = logging.getLogger(__name__)
