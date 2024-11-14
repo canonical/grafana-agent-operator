@@ -89,6 +89,7 @@ class GrafanaAgentCharm(CharmBase):
     _snap_key_path = "/var/snap/grafana-agent/common/grafana-agent.key"
     _snap_ca_path = "/var/snap/grafana-agent/common/grafana-agent-operator.crt"
     _snap_folder_path = "/var/snap/grafana-agent/common/"
+    # We have a `limit: 1` on the cloud integrator relation so we expect only one such cert.
     _cloud_ca_path = "/usr/local/share/ca-certificates/cloud-integrator.crt"
 
     # mapping from tempo-supported receivers to the receiver ports to be opened on the grafana-agent host
