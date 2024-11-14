@@ -6,7 +6,7 @@ from ops.framework import EventBase, EventSource, Object, ObjectEvents
 
 LIBID = "e6f580481c1b4388aa4d2cdf412a47fa"
 LIBAPI = 0
-LIBPATCH = 6
+LIBPATCH = 7
 
 DEFAULT_RELATION_NAME = "grafana-cloud-config"
 
@@ -83,16 +83,8 @@ class GrafanaCloudConfigRequirer(Object):
     @property
     def credentials(self):
         """Return the credentials, if any; otherwise, return None."""
-        if not all(
-            self._is_not_empty(x)
-            for x in [
-                self._data.get("username", ""),
-                self._data.get("password", ""),
-            ]):
-                return Credentials(
-                    self._data.get("username", ""),
-                    self._data.get("password", "")
-                )
+        if (username := self._data.get("username", "").strip()) and (password := self._data.get("password", "").strip()):
+            return Credentials(username, password)
         return None
 
     @property
