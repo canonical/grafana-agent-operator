@@ -25,10 +25,10 @@ log = logging.getLogger(__name__)
 _grafana_agent_snap_name = "grafana-agent"
 _grafana_agent_snaps = {
     # (confinement, arch): revision
-    ("strict", "amd64"): 51,  # 0.40.4
-    ("strict", "arm64"): 52,  # 0.40.4
-    ("classic", "amd64"): 82,  # 0.40.4
-    ("classic", "arm64"): 83,  # 0.40.4
+    ("strict", "amd64"): 84,  # 0.40.4
+    ("strict", "arm64"): 85,  # 0.40.4
+    ("classic", "amd64"): 86,  # 0.40.4
+    ("classic", "arm64"): 87,  # 0.40.4
 }
 
 
