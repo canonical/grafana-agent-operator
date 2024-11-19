@@ -22,7 +22,7 @@ from cosl.rules import AlertRules
 from ops.main import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
 
-from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
+from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm, CONFIG_PATH
 from snap_management import SnapSpecError, install_ga_snap
 
 logger = logging.getLogger(__name__)
@@ -247,6 +247,11 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def _install(self) -> None:
         """Install/refresh the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
+        # Grafana-agent is not yet available, so no config update needed yet.
+        # On install, create a config file, to avoid a transient error:
+        #   error reading config file open /etc/grafana-agent.yaml: no such file or directory
+        if not os.path.exists(CONFIG_PATH):
+            self.write_file(CONFIG_PATH, yaml.dump(self._generate_config()))
         try:
             install_ga_snap(
                 classic=bool(self.config["classic_snap"]),
