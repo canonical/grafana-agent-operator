@@ -90,6 +90,12 @@ peers:
 
 config:
   options:
+    classic_snap:
+      description: |
+        Choose whether to use the classic snap over the strictly confined
+        one. Defaults to "true".
+      type: boolean
+      default: true
     tls_insecure_skip_verify:
       description: |
         Flag to skip the verification for insecure TLS.
