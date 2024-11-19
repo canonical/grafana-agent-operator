@@ -156,6 +156,7 @@ class GrafanaAgentServiceError(GrafanaAgentError):
     tracing_endpoint="_charm_tracing_endpoint",
     server_cert="_server_cert",
     extra_types=(COSAgentRequirer, JujuTopology, SnapFstab),
+    buffer_max_events=0,
 )
 class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     """Machine version of the Grafana Agent charm."""
