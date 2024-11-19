@@ -24,6 +24,10 @@ async def ssh(ops_test, app_name: str, command: str) -> List[str]:
         pytest.fail(f"Failed to run ssh command '{command}' in {app_name}: {e.message}")
 
 
+async def test_setup_env(ops_test: OpsTest):
+    await ops_test.model.set_config({"logging-config": "<root>=WARNING; unit=DEBUG"})
+
+
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
     # Principal
