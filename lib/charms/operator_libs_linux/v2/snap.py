@@ -278,8 +278,8 @@ class Snap(object):
             return subprocess.check_output(args, universal_newlines=True)
         except CalledProcessError as e:
             raise SnapError(
-                "Snap: {!r}; command {!r} failed with output = {!r}; stderr = {!r}".format(
-                    self._name, args, e.output, e.stderr,
+                "Snap: {!r}; command {!r} failed with output = {!r}".format(
+                    self._name, args, e.output
                 )
             )
 
