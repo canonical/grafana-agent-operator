@@ -10,9 +10,10 @@
 Modified from https://github.com/canonical/k8s-operator/blob/main/charms/worker/k8s/src/snap.py
 """
 
-
 import logging
 import platform
+import subprocess
+from typing import Dict, Optional
 
 import charms.operator_libs_linux.v2.snap as snap_lib
 
@@ -24,8 +25,10 @@ log = logging.getLogger(__name__)
 _grafana_agent_snap_name = "grafana-agent"
 _grafana_agent_snaps = {
     # (confinement, arch): revision
-    ("strict", "amd64"): 51,  # 0.40.4
-    ("strict", "arm64"): 52,  # 0.40.4
+    ("strict", "amd64"): 94,  # 0.40.4
+    ("strict", "arm64"): 96,  # 0.40.4
+    ("classic", "amd64"): 95,  # 0.40.4
+    ("classic", "arm64"): 97,  # 0.40.4
 }
 
 
@@ -35,7 +38,7 @@ class SnapSpecError(Exception):
     pass
 
 
-def install_ga_snap(classic: bool):
+def install_ga_snap(classic: bool, config: Optional[Dict[str, str]] = None):
     """Looks up system details and installs the appropriate grafana-agent snap revision."""
     arch = get_system_arch()
     confinement = "classic" if classic else "strict"
@@ -45,13 +48,14 @@ def install_ga_snap(classic: bool):
         raise SnapSpecError(
             f"Snap spec not found for arch={arch} and confinement={confinement}"
         ) from e
-    _install_snap(name=_grafana_agent_snap_name, revision=revision, classic=classic)
+    _install_snap(name=_grafana_agent_snap_name, revision=revision, classic=classic, config=config)
 
 
 def _install_snap(
     name: str,
     revision: str,
     classic: bool = False,
+    config: Optional[Dict[str, str]] = None,
 ):
     """Install and pin the given snap revision.
 
@@ -63,7 +67,23 @@ def _install_snap(
         f"Ensuring {name} snap is installed at revision={revision}"
         f" with classic confinement={classic}"
     )
-    snap.ensure(state=snap_lib.SnapState.Present, revision=revision, classic=classic)
+    # snap.ensure(state=snap_lib.SnapState.Present, revision=revision, classic=classic)
+    # Currently, snap.ensure does not properly use the classic flag. Use the commented line above
+    # instead of the below code once the issue is resolved.
+    # https://github.com/canonical/operator-libs-linux/issues/129
+    if snap.present:
+        if snap.revision != revision:
+            cmd = ["snap", "refresh", "grafana-agent", f'--revision="{revision}"']
+            if classic:
+                cmd.append("--classic")
+            subprocess.run(cmd)
+            snap.start(enable=True)
+    else:
+        snap.ensure(state=snap_lib.SnapState.Present, revision=revision, classic=classic)
+
+    if config:
+        snap.set(config)
+
     snap.hold()
 
 

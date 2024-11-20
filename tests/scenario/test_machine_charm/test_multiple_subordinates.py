@@ -2,13 +2,11 @@
 # See LICENSE file for licensing details.
 
 import json
-from unittest.mock import PropertyMock, patch
 
-import charm
 import pytest
 from scenario import Context, PeerRelation, State, SubordinateRelation
 
-from tests.scenario.helpers import get_charm_meta
+import charm
 
 
 @pytest.fixture(autouse=True)
@@ -17,14 +15,7 @@ def use_mock_config_path(mock_config_path):
     yield
 
 
-@pytest.fixture(autouse=True)
-def mock_snap():
-    """Mock the charm's snap property so we don't access the host."""
-    with patch("charm.GrafanaAgentMachineCharm.snap", new_callable=PropertyMock):
-        yield
-
-
-def test_juju_info_and_cos_agent(vroot):
+def test_juju_info_and_cos_agent(vroot, charm_config):
     def post_event(charm: charm.GrafanaAgentMachineCharm):
         assert len(charm._cos.dashboards) == 1
         assert len(charm._cos.snap_log_endpoints) == 1
@@ -56,7 +47,6 @@ def test_juju_info_and_cos_agent(vroot):
 
     context = Context(
         charm_type=charm.GrafanaAgentMachineCharm,
-        meta=get_charm_meta(charm.GrafanaAgentMachineCharm),
         charm_root=vroot,
     )
     state = State(
@@ -64,12 +54,13 @@ def test_juju_info_and_cos_agent(vroot):
             cos_agent_relation,
             SubordinateRelation("juju-info", remote_app_name="remote-juju-info"),
             PeerRelation("peers"),
-        ]
+        ],
+        config=charm_config,
     )
     context.run(event=cos_agent_relation.changed_event, state=state, post_event=post_event)
 
 
-def test_two_cos_agent_relations(vroot):
+def test_two_cos_agent_relations(vroot, charm_config):
     def post_event(charm: charm.GrafanaAgentMachineCharm):
         assert len(charm._cos.dashboards) == 2
         assert len(charm._cos.snap_log_endpoints) == 2
@@ -122,7 +113,6 @@ def test_two_cos_agent_relations(vroot):
 
     context = Context(
         charm_type=charm.GrafanaAgentMachineCharm,
-        meta=get_charm_meta(charm.GrafanaAgentMachineCharm),
         charm_root=vroot,
     )
     state = State(
@@ -130,7 +120,8 @@ def test_two_cos_agent_relations(vroot):
             cos_agent_primary_relation,
             cos_agent_subordinate_relation,
             PeerRelation("peers"),
-        ]
+        ],
+        config=charm_config,
     )
     out_state = context.run(event=cos_agent_primary_relation.changed_event, state=state)
     vroot.clean()

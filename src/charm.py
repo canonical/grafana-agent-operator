@@ -4,23 +4,25 @@
 # See LICENSE file for licensing details.
 
 """A  juju charm for Grafana Agent on Kubernetes."""
+
 import logging
 import os
 import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Set, Union, get_args
 
-from charms.grafana_agent.v0.cos_agent import COSAgentRequirer
+import yaml
+from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, ReceiverProtocol
 from charms.operator_libs_linux.v2 import snap  # type: ignore
-from charms.tempo_k8s.v1.charm_tracing import trace_charm
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
 from cosl import JujuTopology
 from cosl.rules import AlertRules
-from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
-from ops.main import main
+from ops import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
+
+from grafana_agent import CONFIG_PATH, METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from snap_management import SnapSpecError, install_ga_snap
 
 logger = logging.getLogger(__name__)
@@ -150,9 +152,10 @@ class GrafanaAgentServiceError(GrafanaAgentError):
 
 
 @trace_charm(
-    tracing_endpoint="tracing_endpoint",
-    server_cert="server_cert_path",
-    extra_types=(COSAgentRequirer, GrafanaAgentCharm, JujuTopology, SnapFstab),
+    # these attrs are implemented on GrafanaAgentCharm
+    tracing_endpoint="_charm_tracing_endpoint",
+    server_cert="_server_cert",
+    extra_types=(COSAgentRequirer, JujuTopology, SnapFstab),
 )
 class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     """Machine version of the Grafana Agent charm."""
@@ -180,13 +183,13 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         # we always listen to juju-info-joined events even though one of the two paths will be
         # at all effects unused.
         self._cos = COSAgentRequirer(self)
-        self._tracing = TracingEndpointRequirer(self, protocols=["otlp_http"])
         self.framework.observe(
             self._cos.on.data_changed,  # pyright: ignore
             self._on_cos_data_changed,
         )
         self.framework.observe(
-            self._cos.on.validation_error, self._on_cos_validation_error  # pyright: ignore
+            self._cos.on.validation_error,
+            self._on_cos_validation_error,  # pyright: ignore
         )
         self.framework.observe(self.on["juju_info"].relation_joined, self._on_juju_info_joined)
         self.framework.observe(self.on.install, self.on_install)
@@ -226,6 +229,17 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
         self._update_status()
 
+    def _verify_snap_track(self) -> None:
+        try:
+            # install_ga_snap calls snap.ensure so it should do the right thing whether the track
+            # changes or not.
+            install_ga_snap(
+                classic=bool(self.config["classic_snap"]),
+                config={"reporting-enabled": "1" if self.config["reporting_enabled"] else "0"},
+            )
+        except (snap.SnapError, SnapSpecError) as e:
+            raise GrafanaAgentInstallError("Failed to refresh grafana-agent.") from e
+
     def on_install(self, _event) -> None:
         """Install the Grafana Agent snap."""
         self._install()
@@ -233,8 +247,16 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def _install(self) -> None:
         """Install/refresh the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
+        # Grafana-agent is not yet available, so no config update needed yet.
+        # On install, create a config file, to avoid a transient error:
+        #   error reading config file open /etc/grafana-agent.yaml: no such file or directory
+        if not os.path.exists(CONFIG_PATH):
+            self.write_file(CONFIG_PATH, yaml.dump(self._generate_config()))
         try:
-            install_ga_snap(classic=False)
+            install_ga_snap(
+                classic=bool(self.config["classic_snap"]),
+                config={"reporting-enabled": "1" if self.config["reporting_enabled"] else "0"},
+            )
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 
@@ -274,6 +296,13 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         super()._on_upgrade_charm(event)
         self._install()
 
+    def _on_cert_changed(self, event):
+        """Event handler for cert change."""
+        super()._on_cert_changed(event)
+        # most cases are already resolved within `grafana_agent` parent object, but we don't have the notion of
+        # tracing receivers in COS agent there so we need to update them separately.
+        self._cos.update_tracing_receivers()
+
     @property
     def is_k8s(self) -> bool:
         """Is this a k8s charm."""
@@ -302,6 +331,17 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def logs_rules(self) -> Dict[str, Any]:
         """Return a list of logging rules."""
         return self._cos.logs_alerts
+
+    @property
+    def requested_tracing_protocols(self) -> Set[ReceiverProtocol]:
+        """Return a list of requested tracing receivers."""
+        protocols = self._cos.requested_tracing_protocols()
+        protocols.update(
+            receiver
+            for receiver in get_args(ReceiverProtocol)
+            if self.config.get(f"always_enable_{receiver}")
+        )
+        return protocols
 
     @property
     def dashboards(self) -> list:
@@ -384,9 +424,12 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         )
         return {
             "node_exporter": {
-                "rootfs_path": "/var/lib/snapd/hostfs",
+                "rootfs_path": "/"
+                if bool(self.config["classic_snap"])
+                else "/var/lib/snapd/hostfs",
                 "enabled": True,
                 "enable_collectors": [
+                    "drm",
                     "logind",
                     "systemd",
                     "mountstats",
@@ -411,11 +454,11 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     @property
     def _additional_log_configs(self) -> List[Dict[str, Any]]:
         """Additional logging configuration for machine charms."""
-        _, loki_endpoints = self._enrich_endpoints()
+        endpoints = self._loki_endpoints_with_tls()
         return [
             {
                 "name": "log_file_scraper",
-                "clients": loki_endpoints,
+                "clients": endpoints,
                 "scrape_configs": [
                     {
                         "job_name": "varlog",
@@ -491,89 +534,167 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             }
         ] + topology_relabels  # type: ignore
 
+    def _evaluate_log_paths(self, paths: List[str], snap: str, app: str) -> List[str]:
+        """Evaluate each log path using snap to resolve environment variables.
+
+        Raises:
+            Exception: If echo fails.
+        """
+        # There is a potential for shell injection here. It seems okay because the potential
+        # attacking charm has root access on the machine already anyway.
+        new_paths = []
+        for path in paths:
+            cmd = f"echo 'echo {path}' | snap run --shell {snap}.{app}"
+            p = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            if p.returncode != 0:
+                raise Exception(
+                    f"Failed to evaluate path with command: {cmd}\nSTDOUT: {p.stdout}\nSTDERR: {p.stderr}"
+                )
+            new_paths.append(p.stdout.strip())
+        return new_paths
+
+    def _snap_plug_job(
+        self, owner: str, target_path: str, app: str, unit: str, label_path: str
+    ) -> dict:
+        job_name = f"{owner}-{label_path.replace('/', '-')}"
+        job = {
+            "job_name": job_name,
+            "static_configs": [
+                {
+                    "targets": ["localhost"],
+                    "labels": {
+                        "job": job_name,
+                        "__path__": target_path,
+                        **{  # from grafana-agent's topology
+                            k: v
+                            for k, v in self._instance_topology.items()
+                            if k not in ["juju_unit", "juju_application"]
+                        },
+                        # from the topology of the charm owning the snap
+                        "juju_application": app,
+                        "juju_unit": unit,
+                        "snap_name": owner,
+                    },
+                }
+            ],
+            "pipeline_stages": [
+                {
+                    "drop": {
+                        "expression": ".*file is a directory.*",
+                    },
+                },
+                {
+                    "structured_metadata": {"filename": "filename"},
+                },
+                {
+                    "labeldrop": ["filename"],
+                },
+            ],
+        }
+
+        job["relabel_configs"] = [
+            {
+                "source_labels": ["__path__"],
+                "target_label": "path",
+                "replacement": label_path if label_path.startswith("/") else f"/{label_path}",
+            }
+        ]
+        return job
+
+    def _path_label(self, path):
+        """Best effort at figuring out what the path label should be.
+
+        Try to make the path reflect what it would normally be with a non snap version of the
+        software.
+        """
+        match = re.match("^.*(var/log/.*$)", path)
+        if match:
+            return match.group(1)
+        match = re.match("^/var/snap/.*/common/(.*)$", path)
+        if match:
+            return match.group(1)
+        # We couldn't figure it out so just use the full path.
+        return path
+
     @property
     def _snap_plugs_logging_configs(self) -> List[Dict[str, Any]]:
         """One logging config for each separate snap connected over the "logs" endpoint."""
         agent_fstab = SnapFstab(Path("/var/lib/snapd/mount/snap.grafana-agent.fstab"))
-
         shared_logs_configs = []
-        endpoint_owners = {
-            endpoint.owner: {"juju_application": topology.application, "juju_unit": topology.unit}
-            for endpoint, topology in self._cos.snap_log_endpoints_with_topology
-        }
-        for fstab_entry in agent_fstab.entries:
-            if fstab_entry.owner not in endpoint_owners.keys():
-                continue
 
-            target_path = (
-                f"{fstab_entry.target}/**"
-                if fstab_entry
-                else "/snap/grafana-agent/current/shared-logs/**"
-            )
-            job_name = f"{fstab_entry.owner}-{fstab_entry.endpoint_source.replace('/', '-')}"
-            job = {
-                "job_name": job_name,
-                "static_configs": [
-                    {
-                        "targets": ["localhost"],
-                        "labels": {
-                            "job": job_name,
-                            "__path__": target_path,
-                            **{  # from grafana-agent's topology
-                                k: v
-                                for k, v in self._instance_topology.items()
-                                if k not in ["juju_unit", "juju_application"]
-                            },
-                            # from the topology of the charm owning the snap
-                            **endpoint_owners[fstab_entry.owner],
-                            "snap_name": fstab_entry.owner,
-                        },
-                    }
-                ],
-                "pipeline_stages": [
-                    {
-                        "drop": {
-                            "expression": ".*file is a directory.*",
-                        },
-                    },
-                ],
-            }
-
-            job["relabel_configs"] = [
-                {
-                    "source_labels": ["__path__"],
-                    "target_label": "path",
-                    "replacement": fstab_entry.relative_target,
+        if self.config["classic_snap"]:
+            # Iterate through each logging endpoint.
+            for endpoint, topology in self._cos.snap_log_endpoints_with_topology:
+                try:
+                    with open(f"/snap/{endpoint.owner}/current/meta/snap.yaml") as f:
+                        snap_yaml = yaml.safe_load(f)
+                except FileNotFoundError:
+                    logger.error(
+                        f"snap file for {endpoint.owner} not found. It is likely not installed. Skipping."
+                    )
+                    continue
+                # Get the directories we need to monitor.
+                log_dirs = snap_yaml["slots"][endpoint.name]["source"]["read"]
+                for key in snap_yaml["apps"].keys():
+                    snap_app_name = key  # Just use any app.
+                    break
+                # Evaluate any variables in the paths.
+                log_dirs = self._evaluate_log_paths(
+                    paths=log_dirs, snap=endpoint.owner, app=snap_app_name
+                )
+                # Create a job for each path.
+                for path in log_dirs:
+                    job = self._snap_plug_job(
+                        endpoint.owner,
+                        f"{path}/**",
+                        topology.application,
+                        str(topology.unit),
+                        self._path_label(path),
+                    )
+                    shared_logs_configs.append(job)
+        else:
+            endpoint_owners = {
+                endpoint.owner: {
+                    "juju_application": topology.application,
+                    "juju_unit": topology.unit,
                 }
-            ]
+                for endpoint, topology in self._cos.snap_log_endpoints_with_topology
+            }
+            for fstab_entry in agent_fstab.entries:
+                if fstab_entry.owner not in endpoint_owners.keys():
+                    continue
 
-            shared_logs_configs.append(job)
+                target_path = (
+                    f"{fstab_entry.target}/**"
+                    if fstab_entry
+                    else "/snap/grafana-agent/current/shared-logs/**"
+                )
+
+                job = self._snap_plug_job(
+                    fstab_entry.owner,
+                    target_path,
+                    endpoint_owners[fstab_entry.owner]["juju_application"],
+                    endpoint_owners[fstab_entry.owner]["juju_unit"],
+                    fstab_entry.relative_target,
+                )
+                shared_logs_configs.append(job)
 
         return shared_logs_configs
 
     def _connect_logging_snap_endpoints(self):
-        for plug in self._cos.snap_log_endpoints:
-            try:
-                self.snap.connect("logs", service=plug.owner, slot=plug.name)
-            except snap.SnapError as e:
-                logger.error(f"error connecting plug {plug} to grafana-agent:logs")
-                logger.error(e.message)
+        # We need to run _verify_snap_track so we make sure we have refreshed BEFORE connecting.
+        self._verify_snap_track()
+        if not self.config["classic_snap"]:
+            for plug in self._cos.snap_log_endpoints:
+                try:
+                    self.snap.connect("logs", service=plug.owner, slot=plug.name)
+                except snap.SnapError as e:
+                    logger.error(f"error connecting plug {plug} to grafana-agent:logs")
+                    logger.error(e.message)
 
     def positions_dir(self) -> str:
         """Return the positions directory."""
         return "${SNAP_DATA}"
-
-    @property
-    def tracing_endpoint(self) -> Optional[str]:
-        """Otlp http endpoint for charm instrumentation."""
-        if self._tracing.is_ready():
-            return self._tracing.get_endpoint("otlp_http")
-        return None
-
-    @property
-    def server_cert_path(self) -> Optional[str]:
-        """Server certificate path for tls tracing."""
-        return self._cert_path
 
 
 if __name__ == "__main__":

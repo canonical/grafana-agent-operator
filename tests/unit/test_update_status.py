@@ -5,8 +5,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from charm import GrafanaAgentMachineCharm as GrafanaAgentCharm
 from ops.testing import Harness
+
+from charm import GrafanaAgentMachineCharm as GrafanaAgentCharm
 
 
 class TestUpdateStatus(unittest.TestCase):
@@ -27,6 +28,10 @@ class TestUpdateStatus(unittest.TestCase):
 
         patcher = patch.object(GrafanaAgentCharm, "_install")
         self.mock_install = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        patcher = patch.object(GrafanaAgentCharm, "_verify_snap_track")
+        self.mock_verify_snap_track = patcher.start()
         self.addCleanup(patcher.stop)
 
         self.harness = Harness(GrafanaAgentCharm)

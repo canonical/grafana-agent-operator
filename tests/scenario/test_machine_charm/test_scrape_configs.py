@@ -9,15 +9,16 @@ import uuid
 from pathlib import Path
 from unittest.mock import patch
 
-import charm
 import pytest
 import yaml
 from charms.grafana_agent.v0.cos_agent import CosAgentProviderUnitData
 from scenario import Context, Model, PeerRelation, Relation, State, SubordinateRelation
 
+import charm
+
 machine_meta = yaml.safe_load(
     (
-        Path(inspect.getfile(charm.GrafanaAgentMachineCharm)).parent.parent / "metadata.yaml"
+        Path(inspect.getfile(charm.GrafanaAgentMachineCharm)).parent.parent / "charmcraft.yaml"
     ).read_text()
 )
 
@@ -29,7 +30,7 @@ def patch_all(placeholder_cfg_path):
 
 
 @pytest.mark.skip(reason="can't parse a custom fstab file")
-def test_snap_endpoints(placeholder_cfg_path):
+def test_snap_endpoints(placeholder_cfg_path, charm_config):
     written_path, written_text = "", ""
 
     def mock_write(_, path, text):
@@ -70,6 +71,7 @@ def test_snap_endpoints(placeholder_cfg_path):
         state = State(
             relations=[cos_relation, loki_relation, PeerRelation("peers")],
             model=Model(name="my-model", uuid=my_uuid),
+            config=charm_config,
         )
 
         ctx = Context(
