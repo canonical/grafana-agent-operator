@@ -19,10 +19,10 @@ from charms.operator_libs_linux.v2 import snap  # type: ignore
 from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
 from cosl import JujuTopology
 from cosl.rules import AlertRules
-from ops.main import main
+from ops import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
 
-from grafana_agent import METRICS_RULES_SRC_PATH, GrafanaAgentCharm
+from grafana_agent import CONFIG_PATH, METRICS_RULES_SRC_PATH, GrafanaAgentCharm
 from snap_management import SnapSpecError, install_ga_snap
 
 logger = logging.getLogger(__name__)
@@ -233,7 +233,10 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         try:
             # install_ga_snap calls snap.ensure so it should do the right thing whether the track
             # changes or not.
-            install_ga_snap(classic=bool(self.config["classic_snap"]))
+            install_ga_snap(
+                classic=bool(self.config["classic_snap"]),
+                config={"reporting-enabled": "1" if self.config["reporting_enabled"] else "0"},
+            )
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to refresh grafana-agent.") from e
 
@@ -244,8 +247,16 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def _install(self) -> None:
         """Install/refresh the Grafana Agent snap."""
         self.unit.status = MaintenanceStatus("Installing grafana-agent snap")
+        # Grafana-agent is not yet available, so no config update needed yet.
+        # On install, create a config file, to avoid a transient error:
+        #   error reading config file open /etc/grafana-agent.yaml: no such file or directory
+        if not os.path.exists(CONFIG_PATH):
+            self.write_file(CONFIG_PATH, yaml.dump(self._generate_config()))
         try:
-            install_ga_snap(classic=bool(self.config["classic_snap"]))
+            install_ga_snap(
+                classic=bool(self.config["classic_snap"]),
+                config={"reporting-enabled": "1" if self.config["reporting_enabled"] else "0"},
+            )
         except (snap.SnapError, SnapSpecError) as e:
             raise GrafanaAgentInstallError("Failed to install grafana-agent.") from e
 
