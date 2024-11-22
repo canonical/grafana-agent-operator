@@ -20,7 +20,7 @@ def one_grafana_agent_per_machine(bundle: dict):
     subordinates_related_to_grafana_agent = []
     for rel_pair in relations:
         # Truncate the relation names
-        apps_pair = [s.split(':',-1)[0] for s in rel_pair]
+        apps_pair = [s.split(":", -1)[0] for s in rel_pair]
 
         related_app = None
         if apps_pair[0] in grafana_agent_names:
@@ -34,7 +34,7 @@ def one_grafana_agent_per_machine(bundle: dict):
             elif related_app in applications:
                 subordinates_related_to_grafana_agent.append(related_app)
 
-    for app1,app2 in combinations(principals_related_to_grafana_agent, 2):
+    for app1, app2 in combinations(principals_related_to_grafana_agent, 2):
         if isect := principals_to_machines[app1].intersection(principals_to_machines[app2]):
             print(f"grafana-agent is related to '{app1}', '{app2}' on the same machine(s) {isect}")
 
@@ -49,7 +49,7 @@ def one_grafana_agent_per_app(bundle: dict):
     counter = defaultdict(list)
     for rel_pair in relations:
         # Truncate the relation names
-        apps_pair = [s.split(':',-1)[0] for s in rel_pair]
+        apps_pair = [s.split(":", -1)[0] for s in rel_pair]
 
         if apps_pair[0] in grafana_agent_names and apps_pair[1] in applications:
             counter[apps_pair[1]].append(apps_pair[0])
@@ -60,8 +60,8 @@ def one_grafana_agent_per_app(bundle: dict):
         if len(v) > 1:
             print(f"App '{k}' related to multiple grafana-agent apps '{v}'")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     bundle = yaml.safe_load(sys.stdin.read())
     one_grafana_agent_per_machine(bundle)
     one_grafana_agent_per_app(bundle)
-
