@@ -7,7 +7,7 @@ juju export-bundle | ./probe_bundle.py
 juju status --format=yaml | ./probe_status.py
 ```
 
-or by piping in the bundle yaml,
+or by piping in the bundle or status yaml,
 
 ```bash
 cat bundle.yaml | ./probe_bundle.py
