@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 
+"""Probe for juju export-bundle."""
+
 import sys
-import yaml
-from itertools import combinations
 from collections import defaultdict
+from itertools import combinations
+
+import yaml
 
 
 def one_grafana_agent_per_machine(bundle: dict):
+    """Can have only one agent per host."""
     applications = bundle["applications"]
     relations = bundle["relations"]
 
@@ -40,6 +44,7 @@ def one_grafana_agent_per_machine(bundle: dict):
 
 
 def one_grafana_agent_per_app(bundle: dict):
+    """Can have only one agent related to the same app."""
     applications = bundle["applications"]
     relations = bundle["relations"]
 

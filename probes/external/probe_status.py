@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
+"""Probe for juju status."""
+
 import sys
+
 import yaml
 
 
 def one_grafana_agent_per_machine(status: dict):
+    """Can have only one agent per host."""
     # A mapping from grafana-agent app name to the list of apps it's subordinate to
     agents = {
         k: v["subordinate-to"]
@@ -29,6 +33,7 @@ def one_grafana_agent_per_machine(status: dict):
 
 
 def one_grafana_agent_per_app(status: dict):
+    """Can have only one agent per host."""
     # A mapping from grafana-agent app name to the list of apps it's subordinate to
     agents = {
         k: v["subordinate-to"]
