@@ -49,4 +49,5 @@ def one_grafana_agent_per_app(status: dict):
 
 if __name__ == '__main__':
     status = yaml.safe_load(sys.stdin.read())
+    one_grafana_agent_per_machine(status)
     one_grafana_agent_per_app(status)
