@@ -12,6 +12,7 @@ show_missing = true
 [tool.ruff]
 line-length = 99
 exclude = ["__pycache__", "*.egg_info"]
+target-version = "py38"
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "C", "N", "R", "D", "I001"]
