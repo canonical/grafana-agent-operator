@@ -212,8 +212,11 @@ config:
       default: true
     exclude_files:
       description: >
-        Glob for a set of log files that should be ignored by Grafana Agent.
+        Glob for a set of log files present in `/var/log` that should be ignored by Grafana Agent.
+
         For example, `/var/log/**/{app_one,app_two}.log` will result in the agent ignoring both 
         `/var/log/app_one.log` and `/var/log/app_two.log`.
+
+        Ref (__path_exclude__): https://grafana.com/docs/loki/latest/send-data/promtail/scraping/
       type: string
       default: ""
