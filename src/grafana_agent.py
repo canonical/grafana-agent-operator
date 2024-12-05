@@ -12,7 +12,7 @@ import shutil
 import socket
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
 
 import yaml
 from charms.certificate_transfer_interface.v0.certificate_transfer import (
@@ -750,7 +750,7 @@ class GrafanaAgentCharm(CharmBase):
         Returns:
             The dict representing the config
         """
-        server_config: Dict[str, Any] = {"log_level": "info"}
+        server_config: Dict[str, Any] = {"log_level": self.log_level}
         if self.cert.enabled:
             server_config["http_tls_config"] = self.tls_config
             server_config["grpc_tls_config"] = self.tls_config
@@ -1065,6 +1065,21 @@ class GrafanaAgentCharm(CharmBase):
         # machine charms we simply want the fqdn, as for VMs it's a vital part of the fingerprint.
 
         return socket.getfqdn()
+
+    @property
+    def log_level(self) -> str:
+        """The log level configured for the charm."""
+        allowed_log_levels = ["debug", "info", "warn", "error"]
+        log_level = cast(str, self.config.get("log_level")).lower()
+
+        if log_level not in allowed_log_levels:
+            logging.warning(
+                "Invalid loglevel: %s given, %s allowed. defaulting to INFO loglevel.",
+                log_level,
+                "/".join(allowed_log_levels),
+            )
+            log_level = "info"
+        return log_level
 
     def _reload_config(self, attempts: int = 10) -> None:
         """Reload the config file.
