@@ -210,3 +210,10 @@ config:
         Ref: https://grafana.com/docs/agent/latest/static/configuration/flags/#report-information-usage
       type: boolean
       default: true
+    exclude_files:
+      description: >
+        Glob for a set of log files that should be ignored by Grafana Agent.
+        For example, `/var/log/**/{app_one,app_two}.log` will result in the agent ignoring both 
+        `/var/log/app_one.log` and `/var/log/app_two.log`.
+      type: string
+      default: ""
