@@ -210,3 +210,10 @@ config:
         Ref: https://grafana.com/docs/agent/latest/static/configuration/flags/#report-information-usage
       type: boolean
       default: true
+    log_level:
+      description: |
+        Grafana Agent server log level (only log messages with the given severity
+        or above). Must be one of: [debug, info, warn, error].
+        If not set, the Grafana Agent default (info) will be used.
+      type: string
+      default: info
