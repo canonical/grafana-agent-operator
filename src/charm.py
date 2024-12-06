@@ -474,7 +474,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
                                 "targets": ["localhost"],
                                 "labels": {
                                     "__path__": "/var/log/**/*log",
-                                    "__path_exclude__": self.model.config.get("exclude_files"),
+                                    "__path_exclude__": self.model.config.get("path_exclude"),
                                     "job": "varlog",
                                     **self._own_labels,
                                 },
