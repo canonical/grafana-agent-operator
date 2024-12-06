@@ -5,7 +5,7 @@ import pytest
 import yaml
 from charms.grafana_agent.v0.cos_agent import ReceiverProtocol
 from charms.tempo_coordinator_k8s.v0.tracing import ReceiverProtocol as TracingReceiverProtocol
-from scenario import Context, Relation, State, SubordinateRelation
+from ops.testing import Context, Relation, State, SubordinateRelation
 
 from charm import GrafanaAgentMachineCharm
 from lib.charms.grafana_agent.v0.cos_agent import (
@@ -21,18 +21,17 @@ def test_cos_agent_receiver_protocols_match_with_tracing():
 
 @pytest.mark.parametrize("protocol", get_args(TracingReceiverProtocol))
 def test_always_enable_config_variables_are_generated_for_tracing_protocols(
-    protocol, vroot, mock_config_path, charm_config
+    protocol, mock_config_path, charm_config
 ):
-    context = Context(
+    ctx = Context(
         charm_type=GrafanaAgentMachineCharm,
-        charm_root=vroot,
     )
     state = State(
         config={f"always_enable_{protocol}": True, **charm_config},
         leader=True,
         relations=[],
     )
-    with context.manager("config-changed", state) as mgr:
+    with ctx(ctx.on.config_changed(), state) as mgr:
         charm: GrafanaAgentMachineCharm = mgr.charm
         assert protocol in charm.requested_tracing_protocols
 
@@ -52,12 +51,11 @@ def test_always_enable_config_variables_are_generated_for_tracing_protocols(
     ),
 )
 def test_tracing_sampling_config_is_present(
-    vroot, placeholder_cfg_path, mock_config_path, sampling_config
+    placeholder_cfg_path, mock_config_path, sampling_config
 ):
     # GIVEN a tracing relation over the tracing-provider endpoint and one over tracing
-    context = Context(
+    ctx = Context(
         charm_type=GrafanaAgentMachineCharm,
-        charm_root=vroot,
     )
     tracing_provider = SubordinateRelation(
         "cos-agent",
@@ -86,7 +84,7 @@ def test_tracing_sampling_config_is_present(
     state = State(leader=True, relations=[tracing, tracing_provider], config=sampling_config)
     # WHEN we process any setup event for the relation
     with patch("charm.GrafanaAgentMachineCharm.is_ready", True):
-        context.run("config_changed", state)
+        ctx.run(ctx.on.config_changed(), state)
 
     yml = yaml.safe_load(placeholder_cfg_path.read_text())
 

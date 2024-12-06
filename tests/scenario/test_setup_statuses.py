@@ -6,8 +6,7 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 from ops import UnknownStatus, WaitingStatus
-from ops.testing import CharmType
-from scenario import Context, State
+from ops.testing import CharmType, Context, State
 
 import charm
 import grafana_agent
@@ -60,13 +59,12 @@ def mock_snap():
 
 
 @patch("charm.SnapManifest._get_system_arch", return_value="amd64")
-def test_install(_mock_manifest_get_system_arch, charm_type, substrate, vroot):
+def test_install(_mock_manifest_get_system_arch, charm_type, substrate):
     context = Context(
         charm_type,
         meta=get_charm_meta(charm_type),
-        charm_root=vroot,
     )
-    out = context.run("install", State())
+    out = context.run(context.on.install(), State())
 
     if substrate == "lxd":
         assert out.unit_status == ("maintenance", "Installing grafana-agent snap")
@@ -75,13 +73,12 @@ def test_install(_mock_manifest_get_system_arch, charm_type, substrate, vroot):
         assert out.unit_status == ("unknown", "")
 
 
-def test_start(charm_type, substrate, vroot):
+def test_start(charm_type, substrate):
     context = Context(
         charm_type,
         meta=get_charm_meta(charm_type),
-        charm_root=vroot,
     )
-    out = context.run("start", State())
+    out = context.run(context.on.start(), State())
 
     if substrate == "lxd":
         assert not grafana_agent.CONFIG_PATH.exists(), "config file written on start"

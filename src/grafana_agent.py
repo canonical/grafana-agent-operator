@@ -150,6 +150,7 @@ class GrafanaAgentCharm(CharmBase):
 
         for rules in [self.loki_rules_paths, self.dashboard_paths]:
             if not os.path.isdir(rules.dest):
+                rules.src.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(rules.src, rules.dest, dirs_exist_ok=True)
 
         self._remote_write = PrometheusRemoteWriteConsumer(
@@ -1074,9 +1075,7 @@ class GrafanaAgentCharm(CharmBase):
 
         if log_level not in allowed_log_levels:
             logging.warning(
-                "Invalid loglevel: %s given, %s allowed. defaulting to INFO loglevel.",
-                log_level,
-                "/".join(allowed_log_levels),
+                f'Invalid loglevel: {log_level} given, {"/".join(allowed_log_levels)} allowed. defaulting to INFO loglevel.'
             )
             log_level = "info"
         return log_level
