@@ -63,7 +63,8 @@ typically in the `__init__` method of your charm (the one which sends telemetry)
 
 - `dashboard_dirs`: List of directories where the dashboards are stored in the Charmed Operator.
 
-- `refresh_events`: List of events on which to refresh relation data.
+- `refresh_events`: List of events on which to refresh relation data. If no events is passed, the
+    relation data will be refreshed on config-changed and charm upgrade.
 
 - `tracing_protocols`: List of requested tracing protocols that the charm requires to send traces.
 
@@ -174,7 +175,8 @@ and two optional arguments.
   `cos_agent` interface.
   The default value of this argument is "cos-agent".
 
-- `refresh_events`: List of events on which to refresh relation data.
+- `refresh_events`: List of events on which to refresh relation data. If no events is passed, the
+    relation data will be refreshed on config-changed and charm upgrade.
 
 
 ### Example 1 - Minimal instrumentation:
@@ -652,7 +654,10 @@ class COSAgentProvider(Object):
         self._recursive = recurse_rules_dirs
         self._log_slots = log_slots or []
         self._dashboard_dirs = dashboard_dirs
-        self._refresh_events = refresh_events or [self._charm.on.config_changed]
+        self._refresh_events = refresh_events or [
+            self._charm.on.config_changed,
+            self._charm.on.upgrade_charm,
+        ]
         self._tracing_protocols = tracing_protocols
         self._is_single_endpoint = charm.meta.relations[relation_name].limit == 1
 
@@ -894,7 +899,10 @@ class COSAgentRequirer(Object):
         self._charm = charm
         self._relation_name = relation_name
         self._peer_relation_name = peer_relation_name
-        self._refresh_events = refresh_events or [self._charm.on.config_changed]
+        self._refresh_events = refresh_events or [
+            self._charm.on.config_changed,
+            self._charm.on.upgrade_charm,
+        ]
 
         events = self._charm.on[relation_name]
         self.framework.observe(

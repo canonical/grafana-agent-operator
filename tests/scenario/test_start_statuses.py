@@ -31,8 +31,9 @@ def _subp_run_mock(*a, **kw):
 
 @pytest.fixture(autouse=True)
 def patch_all(placeholder_cfg_path):
-    with patch("subprocess.run", _subp_run_mock), patch(
-        "grafana_agent.CONFIG_PATH", placeholder_cfg_path
+    with (
+        patch("subprocess.run", _subp_run_mock),
+        patch("grafana_agent.CONFIG_PATH", placeholder_cfg_path),
     ):
         yield
 

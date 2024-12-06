@@ -65,9 +65,11 @@ def test_snap_endpoints(placeholder_cfg_path, charm_config):
 
     my_uuid = str(uuid.uuid4())
 
-    with patch("charms.operator_libs_linux.v2.snap.SnapCache"), patch(
-        "charm.GrafanaAgentMachineCharm.write_file", new=mock_write
-    ), patch("charm.GrafanaAgentMachineCharm.is_ready", return_value=True):
+    with (
+        patch("charms.operator_libs_linux.v2.snap.SnapCache"),
+        patch("charm.GrafanaAgentMachineCharm.write_file", new=mock_write),
+        patch("charm.GrafanaAgentMachineCharm.is_ready", return_value=True),
+    ):
         state = State(
             relations=[cos_relation, loki_relation, PeerRelation("peers")],
             model=Model(name="my-model", uuid=my_uuid),
