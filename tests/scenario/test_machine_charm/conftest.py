@@ -5,6 +5,7 @@ from unittest.mock import PropertyMock, patch
 import pytest
 from charms.tempo_coordinator_k8s.v0.charm_tracing import charm_tracing_disabled
 
+
 @pytest.fixture
 def placeholder_cfg_path(tmp_path):
     return tmp_path / "foo.yaml"

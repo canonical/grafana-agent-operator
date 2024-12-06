@@ -5,7 +5,6 @@ import pytest
 import yaml
 from charms.grafana_agent.v0.cos_agent import ReceiverProtocol
 from charms.tempo_coordinator_k8s.v0.tracing import ReceiverProtocol as TracingReceiverProtocol
-from charms.tempo_coordinator_k8s.v0.charm_tracing import charm_tracing_disabled
 from scenario import Context, Relation, State, SubordinateRelation
 
 from charm import GrafanaAgentMachineCharm
@@ -77,7 +76,9 @@ def test_tracing_sampling_config_is_present(
         remote_app_data=TracingProviderAppData(
             receivers=[
                 Receiver(protocol={"name": "otlp_grpc", "type": "grpc"}, url="http:foo.com:1111"),
-                Receiver(protocol={"name": "otlp_http", "type": "http"}, url="http://localhost:1112"),
+                Receiver(
+                    protocol={"name": "otlp_http", "type": "http"}, url="http://localhost:1112"
+                ),
             ]
         ).dump(),
     )
