@@ -75,7 +75,10 @@ def test_tracing_sampling_config_is_present(
         "tracing",
         remote_app_data=TracingProviderAppData(
             receivers=[
-                Receiver(protocol={"name": "otlp_grpc", "type": "grpc"}, url="http:foo.com:1111")
+                Receiver(protocol={"name": "otlp_grpc", "type": "grpc"}, url="http:foo.com:1111"),
+                Receiver(
+                    protocol={"name": "otlp_http", "type": "http"}, url="http://localhost:1112"
+                ),
             ]
         ).dump(),
     )
