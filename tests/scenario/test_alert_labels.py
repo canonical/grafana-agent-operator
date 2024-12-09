@@ -4,7 +4,7 @@
 import json
 
 import pytest
-from scenario import Context, PeerRelation, Relation, State, SubordinateRelation
+from ops.testing import Context, PeerRelation, Relation, State, SubordinateRelation
 
 import charm
 
@@ -15,7 +15,7 @@ def use_mock_config_path(mock_config_path):
     yield
 
 
-def test_metrics_alert_rule_labels(vroot, charm_config):
+def test_metrics_alert_rule_labels(charm_config):
     """Check that metrics alert rules are labeled with principal topology."""
     cos_agent_primary_data = {
         "config": json.dumps(
@@ -97,9 +97,8 @@ def test_metrics_alert_rule_labels(vroot, charm_config):
     )
     remote_write_relation = Relation("send-remote-write", remote_app_name="prometheus")
 
-    context = Context(
+    ctx = Context(
         charm_type=charm.GrafanaAgentMachineCharm,
-        charm_root=vroot,
     )
     state = State(
         leader=True,
@@ -112,11 +111,13 @@ def test_metrics_alert_rule_labels(vroot, charm_config):
         config=charm_config,
     )
 
-    state_0 = context.run(event=cos_agent_primary_relation.changed_event, state=state)
-    state_1 = context.run(event=cos_agent_subordinate_relation.changed_event, state=state_0)
-    state_2 = context.run(event=remote_write_relation.joined_event, state=state_1)
+    state_0 = ctx.run(ctx.on.relation_changed(relation=cos_agent_primary_relation), state)
+    state_1 = ctx.run(ctx.on.relation_changed(relation=cos_agent_subordinate_relation), state_0)
+    state_2 = ctx.run(ctx.on.relation_joined(relation=remote_write_relation), state_1)
 
-    alert_rules = json.loads(state_2.relations[2].local_app_data["alert_rules"])
+    alert_rules = json.loads(
+        state_2.get_relation(remote_write_relation.id).local_app_data["alert_rules"]
+    )
     for group in alert_rules["groups"]:
         for rule in group["rules"]:
             if "grafana-agent_alertgroup_alerts" in group["name"]:

@@ -4,7 +4,7 @@
 import json
 
 import pytest
-from scenario import Context, PeerRelation, State, SubordinateRelation
+from ops.testing import Context, PeerRelation, State, SubordinateRelation
 
 import charm
 
@@ -15,14 +15,7 @@ def use_mock_config_path(mock_config_path):
     yield
 
 
-def test_juju_info_and_cos_agent(vroot, charm_config):
-    def post_event(charm: charm.GrafanaAgentMachineCharm):
-        assert len(charm._cos.dashboards) == 1
-        assert len(charm._cos.snap_log_endpoints) == 1
-        assert not charm._cos.logs_alerts
-        assert not charm._cos.metrics_alerts
-        assert len(charm._cos.metrics_jobs) == 1
-
+def test_juju_info_and_cos_agent(charm_config):
     cos_agent_data = {
         "config": json.dumps(
             {
@@ -45,9 +38,8 @@ def test_juju_info_and_cos_agent(vroot, charm_config):
         "cos-agent", remote_app_name="hardware-observer", remote_unit_data=cos_agent_data
     )
 
-    context = Context(
+    ctx = Context(
         charm_type=charm.GrafanaAgentMachineCharm,
-        charm_root=vroot,
     )
     state = State(
         relations=[
@@ -57,17 +49,17 @@ def test_juju_info_and_cos_agent(vroot, charm_config):
         ],
         config=charm_config,
     )
-    context.run(event=cos_agent_relation.changed_event, state=state, post_event=post_event)
+    with ctx(ctx.on.relation_changed(cos_agent_relation), state) as mgr:
+        mgr.run()
+
+        assert len(mgr.charm._cos.dashboards) == 1
+        assert len(mgr.charm._cos.snap_log_endpoints) == 1
+        assert not mgr.charm._cos.logs_alerts
+        assert not mgr.charm._cos.metrics_alerts
+        assert len(mgr.charm._cos.metrics_jobs) == 1
 
 
-def test_two_cos_agent_relations(vroot, charm_config):
-    def post_event(charm: charm.GrafanaAgentMachineCharm):
-        assert len(charm._cos.dashboards) == 2
-        assert len(charm._cos.snap_log_endpoints) == 2
-        assert not charm._cos.logs_alerts
-        assert not charm._cos.metrics_alerts
-        assert len(charm._cos.metrics_jobs) == 2
-
+def test_two_cos_agent_relations(charm_config):
     cos_agent_primary_data = {
         "config": json.dumps(
             {
@@ -111,9 +103,8 @@ def test_two_cos_agent_relations(vroot, charm_config):
         "cos-agent", remote_app_name="subordinate", remote_unit_data=cos_agent_subordinate_data
     )
 
-    context = Context(
+    ctx = Context(
         charm_type=charm.GrafanaAgentMachineCharm,
-        charm_root=vroot,
     )
     state = State(
         relations=[
@@ -123,8 +114,13 @@ def test_two_cos_agent_relations(vroot, charm_config):
         ],
         config=charm_config,
     )
-    out_state = context.run(event=cos_agent_primary_relation.changed_event, state=state)
-    vroot.clean()
-    context.run(
-        event=cos_agent_subordinate_relation.changed_event, state=out_state, post_event=post_event
-    )
+    out_state = ctx.run(ctx.on.relation_changed(relation=cos_agent_primary_relation), state)
+
+    with ctx(ctx.on.relation_changed(relation=cos_agent_subordinate_relation), out_state) as mgr:
+        mgr.run()
+
+        assert len(mgr.charm._cos.dashboards) == 2
+        assert len(mgr.charm._cos.snap_log_endpoints) == 2
+        assert not mgr.charm._cos.logs_alerts
+        assert not mgr.charm._cos.metrics_alerts
+        assert len(mgr.charm._cos.metrics_jobs) == 2

@@ -12,7 +12,7 @@ import shutil
 import socket
 from collections import namedtuple
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
 
 import yaml
 from charms.certificate_transfer_interface.v0.certificate_transfer import (
@@ -72,6 +72,7 @@ class CompoundStatus:
     # None = good; do not use ActiveStatus here.
     update_config: Optional[Union[BlockedStatus, WaitingStatus]] = None
     validation_error: Optional[BlockedStatus] = None
+    config_error: Optional[BlockedStatus] = None
 
 
 class GrafanaAgentCharm(CharmBase):
@@ -150,6 +151,7 @@ class GrafanaAgentCharm(CharmBase):
 
         for rules in [self.loki_rules_paths, self.dashboard_paths]:
             if not os.path.isdir(rules.dest):
+                rules.src.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(rules.src, rules.dest, dirs_exist_ok=True)
 
         self._remote_write = PrometheusRemoteWriteConsumer(
@@ -518,6 +520,10 @@ class GrafanaAgentCharm(CharmBase):
             self.unit.status = self.status.validation_error
             return
 
+        if self.status.config_error:
+            self.unit.status = self.status.config_error
+            return
+
         # Put charm in blocked status if all incoming relations are missing
         active_relations = {k for k, v in self.model.relations.items() if v}
         if not set(self.mandatory_relation_pairs.keys()).intersection(active_relations):
@@ -750,7 +756,7 @@ class GrafanaAgentCharm(CharmBase):
         Returns:
             The dict representing the config
         """
-        server_config: Dict[str, Any] = {"log_level": "info"}
+        server_config: Dict[str, Any] = {"log_level": self.log_level}
         if self.cert.enabled:
             server_config["http_tls_config"] = self.tls_config
             server_config["grpc_tls_config"] = self.tls_config
@@ -1065,6 +1071,21 @@ class GrafanaAgentCharm(CharmBase):
         # machine charms we simply want the fqdn, as for VMs it's a vital part of the fingerprint.
 
         return socket.getfqdn()
+
+    @property
+    def log_level(self) -> str:
+        """The log level configured for the charm."""
+        # Valid upstream log levels in server_config
+        # https://grafana.com/docs/agent/latest/static/configuration/server-config/#server_config
+        allowed_log_levels = ["debug", "info", "warn", "error"]
+        log_level = cast(str, self.config.get("log_level")).lower()
+
+        if log_level not in allowed_log_levels:
+            message = "log_level must be one of {}".format(allowed_log_levels)
+            self.status.config_error = BlockedStatus(message)
+            logging.warning(message)
+            log_level = "info"
+        return log_level
 
     def _reload_config(self, attempts: int = 10) -> None:
         """Reload the config file.

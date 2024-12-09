@@ -2,25 +2,16 @@
 
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-import inspect
 import json
-import tempfile
 import uuid
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 import yaml
 from charms.grafana_agent.v0.cos_agent import CosAgentProviderUnitData
-from scenario import Context, Model, PeerRelation, Relation, State, SubordinateRelation
+from ops.testing import Context, Model, PeerRelation, Relation, State, SubordinateRelation
 
 import charm
-
-machine_meta = yaml.safe_load(
-    (
-        Path(inspect.getfile(charm.GrafanaAgentMachineCharm)).parent.parent / "charmcraft.yaml"
-    ).read_text()
-)
 
 
 @pytest.fixture(autouse=True)
@@ -57,12 +48,6 @@ def test_snap_endpoints(placeholder_cfg_path, charm_config):
         "cos-agent", remote_app_name="principal", remote_unit_data={data.KEY: data.json()}
     )
 
-    vroot = tempfile.TemporaryDirectory()
-    vroot_path = Path(vroot.name)
-    vroot_path.joinpath("src", "loki_alert_rules").mkdir(parents=True)
-    vroot_path.joinpath("src", "prometheus_alert_rules").mkdir(parents=True)
-    vroot_path.joinpath("src", "grafana_dashboards").mkdir(parents=True)
-
     my_uuid = str(uuid.uuid4())
 
     with patch("charms.operator_libs_linux.v2.snap.SnapCache"), patch(
@@ -76,8 +61,6 @@ def test_snap_endpoints(placeholder_cfg_path, charm_config):
 
         ctx = Context(
             charm_type=charm.GrafanaAgentMachineCharm,
-            meta=machine_meta,
-            charm_root=vroot.name,
         )
         ctx.run(state=state, event=cos_relation.changed_event)
 
