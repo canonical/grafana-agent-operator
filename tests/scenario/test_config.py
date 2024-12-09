@@ -4,10 +4,11 @@ from unittest.mock import patch
 
 import pytest
 import yaml
+from ops import BlockedStatus
 from ops.testing import Context, State
 
 import charm
-from ops import BlockedStatus
+
 
 @pytest.fixture(autouse=True)
 def patch_all(placeholder_cfg_path):
@@ -17,7 +18,7 @@ def patch_all(placeholder_cfg_path):
 
 @pytest.mark.parametrize("log_level", ("debug", "info", "warn", "error"))
 def test_valid_config_log_level(placeholder_cfg_path, log_level):
-    """Asserts that all valid log_levels set the correct config"""
+    """Asserts that all valid log_levels set the correct config."""
     # GIVEN a GrafanaAgentMachineCharm
     with patch("charm.GrafanaAgentMachineCharm.is_ready", True):
         ctx = Context(charm_type=charm.GrafanaAgentMachineCharm)
@@ -31,7 +32,7 @@ def test_valid_config_log_level(placeholder_cfg_path, log_level):
 
 @patch("charm.GrafanaAgentMachineCharm.is_ready", True)
 def test_invalid_config_log_level(placeholder_cfg_path):
-    """Asserts that an invalid log_level sets Blocked status"""
+    """Asserts that an invalid log_level sets Blocked status."""
     # GIVEN a GrafanaAgentMachineCharm
     ctx = Context(charm_type=charm.GrafanaAgentMachineCharm)
     with ctx(ctx.on.start(), State(config={"log_level": "foo"})) as mgr:
