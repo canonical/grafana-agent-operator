@@ -72,6 +72,7 @@ class CompoundStatus:
     # None = good; do not use ActiveStatus here.
     update_config: Optional[Union[BlockedStatus, WaitingStatus]] = None
     validation_error: Optional[BlockedStatus] = None
+    config_error: Optional[BlockedStatus] = None
 
 
 class GrafanaAgentCharm(CharmBase):
@@ -517,6 +518,10 @@ class GrafanaAgentCharm(CharmBase):
 
         if self.status.validation_error:
             self.unit.status = self.status.validation_error
+            return
+
+        if self.status.config_error:
+            self.unit.status = self.status.config_error
             return
 
         # Put charm in blocked status if all incoming relations are missing
@@ -1076,9 +1081,9 @@ class GrafanaAgentCharm(CharmBase):
         log_level = cast(str, self.config.get("log_level")).lower()
 
         if log_level not in allowed_log_levels:
-            logging.warning(
-                f'Invalid loglevel: {log_level} given, {"/".join(allowed_log_levels)} allowed. defaulting to INFO loglevel.'
-            )
+            message = "log_level must be one of {}".format(allowed_log_levels)
+            self.status.config_error = BlockedStatus(message)
+            logging.warning(message)
             log_level = "info"
         return log_level
 

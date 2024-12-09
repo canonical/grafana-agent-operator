@@ -197,10 +197,7 @@ def test_cos_agent_wrong_rel_data(snap_is_installed, provider_ctx):
     )
     assert state_out.unit_status.name == "unknown"
 
-    found = False
-    for log in provider_ctx.juju_log:
-        if "ERROR" == log.level and "Invalid relation data provided:" in log.message:
-            found = True
-            break
-
-    assert found is True
+    assert any(
+        log.level == "ERROR" and "Invalid relation data provided:" in log.message
+        for log in provider_ctx.juju_log
+    )
