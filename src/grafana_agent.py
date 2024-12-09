@@ -1070,6 +1070,8 @@ class GrafanaAgentCharm(CharmBase):
     @property
     def log_level(self) -> str:
         """The log level configured for the charm."""
+        # Valid upstream log levels in server_config
+        # https://grafana.com/docs/agent/latest/static/configuration/server-config/#server_config
         allowed_log_levels = ["debug", "info", "warn", "error"]
         log_level = cast(str, self.config.get("log_level")).lower()
 

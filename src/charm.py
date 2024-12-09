@@ -378,7 +378,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             text: text to write to the file
         """
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        print(path)
         with open(path, "w") as f:
             f.write(text)
 

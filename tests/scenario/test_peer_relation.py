@@ -143,9 +143,9 @@ def test_cosagent_to_peer_data_flow_dashboards(leader):
         out = mgr.run()
         assert mgr.charm.cosagent.dashboards
 
-        peer_relation_out = next(filter(lambda r: r.endpoint == "peers", out.relations))
-        peer_data = peer_relation_out.local_unit_data[f"{CosAgentPeersUnitData.KEY}-primary/0"]
-        assert json.loads(peer_data)["dashboards"] == [encode_as_dashboard(raw_dashboard_1)]
+    peer_relation_out = next(filter(lambda r: r.endpoint == "peers", out.relations))
+    peer_data = peer_relation_out.local_unit_data[f"{CosAgentPeersUnitData.KEY}-primary/0"]
+    assert json.loads(peer_data)["dashboards"] == [encode_as_dashboard(raw_dashboard_1)]
 
 
 @pytest.mark.parametrize("leader", (True, False))
@@ -231,18 +231,16 @@ def test_cosagent_to_peer_data_flow_relation(leader):
         assert other_dash["title"] == "other_title"
         assert other_dash["content"] == raw_dashboard_2
 
-        peer_relation_out: PeerRelation = next(
-            filter(lambda r: r.endpoint == "peers", out.relations)
-        )
-        # the dashboard we just received via cos-agent is now in our local peer databag
-        peer_data_local = peer_relation_out.local_unit_data[
-            f"{CosAgentPeersUnitData.KEY}-other_primary/0"
-        ]
-        assert json.loads(peer_data_local)["dashboards"] == [encode_as_dashboard(raw_dashboard_2)]
+    peer_relation_out: PeerRelation = next(filter(lambda r: r.endpoint == "peers", out.relations))
+    # the dashboard we just received via cos-agent is now in our local peer databag
+    peer_data_local = peer_relation_out.local_unit_data[
+        f"{CosAgentPeersUnitData.KEY}-other_primary/0"
+    ]
+    assert json.loads(peer_data_local)["dashboards"] == [encode_as_dashboard(raw_dashboard_2)]
 
-        # the dashboard we previously had via peer data is still there.
-        peer_data_peer = peer_relation_out.peers_data[1][f"{CosAgentPeersUnitData.KEY}-primary/0"]
-        assert json.loads(peer_data_peer)["dashboards"] == [encode_as_dashboard(raw_dashboard_1)]
+    # the dashboard we previously had via peer data is still there.
+    peer_data_peer = peer_relation_out.peers_data[1][f"{CosAgentPeersUnitData.KEY}-primary/0"]
+    assert json.loads(peer_data_peer)["dashboards"] == [encode_as_dashboard(raw_dashboard_1)]
 
 
 @pytest.mark.parametrize("leader", (True, False))
@@ -340,19 +338,17 @@ def test_cosagent_to_peer_data_app_vs_unit(leader):
         assert dash_1["title"] == "title"
         assert dash_1["content"] == raw_dashboard_1
 
-        peer_relation_out: PeerRelation = next(
-            filter(lambda r: r.endpoint == "peers", out.relations)
-        )
-        my_databag_peer_data = peer_relation_out.local_unit_data[
-            f"{CosAgentPeersUnitData.KEY}-other_primary/0"
-        ]
-        assert set(json.loads(my_databag_peer_data)["dashboards"]) == {
-            encode_as_dashboard(raw_dashboard_2)
-        }
+    peer_relation_out: PeerRelation = next(filter(lambda r: r.endpoint == "peers", out.relations))
+    my_databag_peer_data = peer_relation_out.local_unit_data[
+        f"{CosAgentPeersUnitData.KEY}-other_primary/0"
+    ]
+    assert set(json.loads(my_databag_peer_data)["dashboards"]) == {
+        encode_as_dashboard(raw_dashboard_2)
+    }
 
-        peer_databag_peer_data = peer_relation_out.peers_data[1][
-            f"{CosAgentPeersUnitData.KEY}-primary/23"
-        ]
-        assert json.loads(peer_databag_peer_data)["dashboards"][0] == encode_as_dashboard(
-            raw_dashboard_1
-        )
+    peer_databag_peer_data = peer_relation_out.peers_data[1][
+        f"{CosAgentPeersUnitData.KEY}-primary/23"
+    ]
+    assert json.loads(peer_databag_peer_data)["dashboards"][0] == encode_as_dashboard(
+        raw_dashboard_1
+    )

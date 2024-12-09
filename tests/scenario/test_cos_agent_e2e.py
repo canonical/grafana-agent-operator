@@ -13,12 +13,6 @@ from ops.charm import CharmBase
 from ops.framework import Framework
 from ops.testing import Context, PeerRelation, State, SubordinateRelation
 
-
-@pytest.fixture
-def placeholder_cfg_path(tmp_path):
-    return tmp_path / "foo.yaml"
-
-
 PROVIDER_NAME = "mock-principal"
 PROM_RULE = """alert: HostCpuHighIowait
 expr: avg by (instance) (rate(node_cpu_seconds_total{mode="iowait"}[5m])) * 100 > 10
