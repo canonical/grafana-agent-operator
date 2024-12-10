@@ -1,9 +1,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 import json
-import os
-import tempfile
-from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
@@ -14,13 +11,7 @@ from charms.grafana_agent.v0.cos_agent import (
 )
 from ops.charm import CharmBase
 from ops.framework import Framework
-from scenario import Context, PeerRelation, State, SubordinateRelation
-
-
-@pytest.fixture
-def placeholder_cfg_path(tmp_path):
-    return tmp_path / "foo.yaml"
-
+from ops.testing import Context, PeerRelation, State, SubordinateRelation
 
 PROVIDER_NAME = "mock-principal"
 PROM_RULE = """alert: HostCpuHighIowait
@@ -57,28 +48,6 @@ def patch_all(placeholder_cfg_path):
         "grafana_agent.CONFIG_PATH", placeholder_cfg_path
     ), patch("socket.getfqdn", return_value="localhost"):
         yield
-
-
-@pytest.fixture(autouse=True)
-def vroot(placeholder_cfg_path):
-    with tempfile.TemporaryDirectory() as vroot:
-        vroot = Path(vroot)
-        promroot = vroot / "src/prometheus_alert_rules"
-        lokiroot = vroot / "src/loki_alert_rules"
-        grafroot = vroot / "src/grafana_dashboards"
-
-        promroot.mkdir(parents=True)
-        lokiroot.mkdir(parents=True)
-        grafroot.mkdir(parents=True)
-
-        (promroot / "prom.rule").write_text(PROM_RULE)
-        (lokiroot / "loki.rule").write_text(LOKI_RULE)
-        (grafroot / "grafana_dashboard.json").write_text(GRAFANA_DASH)
-
-        old_cwd = os.getcwd()
-        os.chdir(str(vroot))
-        yield vroot
-        os.chdir(old_cwd)
 
 
 @pytest.fixture(autouse=True)
@@ -140,22 +109,26 @@ def requirer_charm():
 
 
 @pytest.fixture
-def provider_ctx(provider_charm, vroot):
-    return Context(charm_type=provider_charm, meta=provider_charm.META, charm_root=vroot)
+def provider_ctx(provider_charm):
+    return Context(charm_type=provider_charm, meta=provider_charm.META)
 
 
 @pytest.fixture
-def requirer_ctx(requirer_charm, vroot):
-    return Context(charm_type=requirer_charm, meta=requirer_charm.META, charm_root=vroot)
+def requirer_ctx(requirer_charm):
+    return Context(charm_type=requirer_charm, meta=requirer_charm.META)
 
 
 def test_cos_agent_changed_no_remote_data(provider_ctx):
     cos_agent = SubordinateRelation("cos-agent")
+
     state_out = provider_ctx.run(
-        cos_agent.changed_event(remote_unit_id=1), State(relations=[cos_agent])
+        provider_ctx.on.relation_changed(relation=cos_agent, remote_unit=1),
+        State(relations=[cos_agent]),
     )
 
-    config = json.loads(state_out.relations[0].local_unit_data[CosAgentPeersUnitData.KEY])
+    config = json.loads(
+        state_out.get_relation(cos_agent.id).local_unit_data[CosAgentPeersUnitData.KEY]
+    )
     assert config["metrics_alert_rules"] == {}
     assert config["log_alert_rules"] == {}
     assert len(config["dashboards"]) == 1
@@ -187,14 +160,15 @@ def test_subordinate_update(requirer_ctx):
         remote_unit_data={"config": json.dumps(config)},
     )
     state_out1 = requirer_ctx.run(
-        cos_agent1.changed_event(remote_unit_id=0), State(relations=[cos_agent1, peer])
+        requirer_ctx.on.relation_changed(relation=cos_agent1, remote_unit=0),
+        State(relations=[cos_agent1, peer]),
     )
     peer_out = state_out1.get_relations("peers")[0]
     peer_out_data = json.loads(
         peer_out.local_unit_data[f"{CosAgentPeersUnitData.KEY}-mock-principal/0"]
     )
     assert peer_out_data["unit_name"] == f"{PROVIDER_NAME}/0"
-    assert peer_out_data["relation_id"] == str(cos_agent1.relation_id)
+    assert peer_out_data["relation_id"] == str(cos_agent1.id)
     assert peer_out_data["relation_name"] == cos_agent1.endpoint
 
     # passthrough as-is
@@ -210,20 +184,20 @@ def test_subordinate_update(requirer_ctx):
     assert "http://localhost:4318" in urls
 
 
-def test_cos_agent_wrong_rel_data(vroot, snap_is_installed, provider_ctx):
+def test_cos_agent_wrong_rel_data(snap_is_installed, provider_ctx):
     # Step 1: principal charm is deployed and ends in "unknown" state
     provider_ctx.charm_spec.charm_type._log_slots = (
         "charmed:frogs"  # Set wrong type, must be a list
     )
     cos_agent_rel = SubordinateRelation("cos-agent")
     state = State(relations=[cos_agent_rel])
-    state_out = provider_ctx.run(cos_agent_rel.changed_event(remote_unit_id=1), state=state)
+
+    state_out = provider_ctx.run(
+        provider_ctx.on.relation_changed(relation=cos_agent_rel, remote_unit=1), state
+    )
     assert state_out.unit_status.name == "unknown"
 
-    found = False
-    for log in provider_ctx.juju_log:
-        if "ERROR" in log[0] and "Invalid relation data provided:" in log[1]:
-            found = True
-            break
-
-    assert found is True
+    assert any(
+        log.level == "ERROR" and "Invalid relation data provided:" in log.message
+        for log in provider_ctx.juju_log
+    )

@@ -15,7 +15,7 @@ from charms.prometheus_k8s.v1.prometheus_remote_write import (
 from cosl import GrafanaDashboard
 from ops.charm import CharmBase
 from ops.framework import Framework
-from scenario import Context, PeerRelation, State, SubordinateRelation
+from ops.testing import Context, PeerRelation, State, SubordinateRelation
 
 
 def encode_as_dashboard(dct: dict):
@@ -72,17 +72,13 @@ class MyRequirerCharm(CharmBase):
 
 
 def test_no_dashboards():
-    state = State()
-
-    def post_event(charm: MyRequirerCharm):
-        assert not charm.cosagent.dashboards
-
     ctx = Context(
         charm_type=MyRequirerCharm,
         meta=MyRequirerCharm.META,
     )
-    state = State()
-    ctx.run(state=state, event="update-status", post_event=post_event)
+    with ctx(ctx.on.update_status(), State()) as mgr:
+        mgr.run()
+        assert not mgr.charm.cosagent.dashboards
 
 
 def test_no_dashboards_peer():
@@ -90,14 +86,13 @@ def test_no_dashboards_peer():
 
     state = State(relations=[peer_relation])
 
-    def post_event(charm: MyRequirerCharm):
-        assert not charm.cosagent.dashboards
-
     ctx = Context(
         charm_type=MyRequirerCharm,
         meta=MyRequirerCharm.META,
     )
-    ctx.run(state=state, event="update-status", post_event=post_event)
+    with ctx(ctx.on.update_status(), state) as mgr:
+        mgr.run()
+        assert not mgr.charm.cosagent.dashboards
 
 
 def test_no_dashboards_peer_cosagent():
@@ -108,14 +103,13 @@ def test_no_dashboards_peer_cosagent():
 
     state = State(relations=[peer_relation, cos_agent])
 
-    def post_event(charm: MyRequirerCharm):
-        assert not charm.cosagent.dashboards
-
     ctx = Context(
         charm_type=MyRequirerCharm,
         meta=MyRequirerCharm.META,
     )
-    ctx.run(state=state, event=cos_agent.changed_event(remote_unit_id=0), post_event=post_event)
+    with ctx(ctx.on.relation_changed(relation=cos_agent, remote_unit=0), state) as mgr:
+        mgr.run()
+        assert not mgr.charm.cosagent.dashboards
 
 
 @pytest.mark.parametrize("leader", (True, False))
@@ -141,19 +135,15 @@ def test_cosagent_to_peer_data_flow_dashboards(leader):
 
     state = State(relations=[peer_relation, cos_agent], leader=leader)
 
-    def post_event(charm: MyRequirerCharm):
-        assert charm.cosagent.dashboards
-
     ctx = Context(
         charm_type=MyRequirerCharm,
         meta=MyRequirerCharm.META,
     )
-    state_out = ctx.run(
-        state=state, event=cos_agent.changed_event(remote_unit_id=0), post_event=post_event
-    )
+    with ctx(ctx.on.relation_changed(relation=cos_agent, remote_unit=0), state) as mgr:
+        out = mgr.run()
+        assert mgr.charm.cosagent.dashboards
 
-    peer_relation_out = next(filter(lambda r: r.endpoint == "peers", state_out.relations))
-    print(peer_relation_out.local_unit_data)
+    peer_relation_out = next(filter(lambda r: r.endpoint == "peers", out.relations))
     peer_data = peer_relation_out.local_unit_data[f"{CosAgentPeersUnitData.KEY}-primary/0"]
     assert json.loads(peer_data)["dashboards"] == [encode_as_dashboard(raw_dashboard_1)]
 
@@ -219,39 +209,29 @@ def test_cosagent_to_peer_data_flow_relation(leader):
         ],
     )
 
-    def pre_event(charm: MyRequirerCharm):
-        dashboards = charm.cosagent.dashboards
-        assert len(dashboards) == 1
-
-        dash = dashboards[0]
-        assert dash["title"] == "title"
-        assert dash["content"] == raw_dashboard_1
-
-    def post_event(charm: MyRequirerCharm):
-        dashboards = charm.cosagent.dashboards
-        assert len(dashboards) == 2
-
-        other_dash, dash = dashboards
-        assert dash["title"] == "title"
-        assert dash["content"] == raw_dashboard_1
-
-        assert other_dash["title"] == "other_title"
-        assert other_dash["content"] == raw_dashboard_2
-
     ctx = Context(
         charm_type=MyRequirerCharm,
         meta=MyRequirerCharm.META,
     )
-    state_out = ctx.run(
-        state=state,
-        event=cos_agent_2.changed_event(remote_unit_id=0),
-        pre_event=pre_event,
-        post_event=post_event,
-    )
 
-    peer_relation_out: PeerRelation = next(
-        filter(lambda r: r.endpoint == "peers", state_out.relations)
-    )
+    with ctx(ctx.on.relation_changed(relation=cos_agent_2, remote_unit=0), state) as mgr:
+        dashboards = mgr.charm.cosagent.dashboards
+        dash_0 = dashboards[0]
+        assert len(dashboards) == 1
+        assert dash_0["title"] == "title"
+        assert dash_0["content"] == raw_dashboard_1
+
+        out = mgr.run()
+
+        dashboards = mgr.charm.cosagent.dashboards
+        other_dash, dash = dashboards
+        assert len(dashboards) == 2
+        assert dash["title"] == "title"
+        assert dash["content"] == raw_dashboard_1
+        assert other_dash["title"] == "other_title"
+        assert other_dash["content"] == raw_dashboard_2
+
+    peer_relation_out: PeerRelation = next(filter(lambda r: r.endpoint == "peers", out.relations))
     # the dashboard we just received via cos-agent is now in our local peer databag
     peer_data_local = peer_relation_out.local_unit_data[
         f"{CosAgentPeersUnitData.KEY}-other_primary/0"
@@ -331,45 +311,34 @@ def test_cosagent_to_peer_data_app_vs_unit(leader):
         ],
     )
 
-    def pre_event(charm: MyRequirerCharm):
-        # verify that before the event is processed, the charm correctly gathers only 1 dashboard
-        dashboards = charm.cosagent.dashboards
-        assert len(dashboards) == 1
-
-        dash = dashboards[0]
-        assert dash["title"] == "title"
-        assert dash["content"] == raw_dashboard_1
-
-    def post_event(charm: MyRequirerCharm):
-        # after the event is processed, the charm has copied its primary's 'cos-agent' data into
-        # its 'peers' peer databag, therefore there are now two dashboards.
-        # The source of the dashboards is peer data.
-
-        dashboards = charm.cosagent.dashboards
-        assert len(dashboards) == 2
-
-        dash = dashboards[0]
-        assert dash["title"] == "other_title"
-        assert dash["content"] == raw_dashboard_2
-
-        dash = dashboards[1]
-        assert dash["title"] == "title"
-        assert dash["content"] == raw_dashboard_1
-
     ctx = Context(
         charm_type=MyRequirerCharm,
         meta=MyRequirerCharm.META,
     )
-    state_out = ctx.run(
-        state=state,
-        event=cos_agent_2.changed_event(remote_unit_id=0),
-        pre_event=pre_event,
-        post_event=post_event,
-    )
 
-    peer_relation_out: PeerRelation = next(
-        filter(lambda r: r.endpoint == "peers", state_out.relations)
-    )
+    with ctx(ctx.on.relation_changed(relation=cos_agent_2, remote_unit=0), state) as mgr:
+        # verify that before the event is processed, the charm correctly gathers only 1 dashboard
+        dashboards = mgr.charm.cosagent.dashboards
+        dash_0 = dashboards[0]
+        assert len(dashboards) == 1
+        assert dash_0["title"] == "title"
+        assert dash_0["content"] == raw_dashboard_1
+
+        out = mgr.run()
+
+        # after the event is processed, the charm has copied its primary's 'cos-agent' data into
+        # its 'peers' peer databag, therefore there are now two dashboards.
+        # The source of the dashboards is peer data.
+        dashboards = mgr.charm.cosagent.dashboards
+        dash_0 = dashboards[0]
+        dash_1 = dashboards[1]
+        assert len(dashboards) == 2
+        assert dash_0["title"] == "other_title"
+        assert dash_0["content"] == raw_dashboard_2
+        assert dash_1["title"] == "title"
+        assert dash_1["content"] == raw_dashboard_1
+
+    peer_relation_out: PeerRelation = next(filter(lambda r: r.endpoint == "peers", out.relations))
     my_databag_peer_data = peer_relation_out.local_unit_data[
         f"{CosAgentPeersUnitData.KEY}-other_primary/0"
     ]
