@@ -232,7 +232,7 @@ from typing import (
 )
 
 import pydantic
-from cosl import GrafanaDashboard, LZMABase64, JujuTopology, generate_dashboard_uid
+from cosl import LZMABase64, JujuTopology, generate_dashboard_uid
 from cosl.rules import AlertRules
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
@@ -476,7 +476,7 @@ class CosAgentProviderUnitData(DatabagModel):
     # this needs to make its way to the gagent leader
     metrics_alert_rules: dict
     log_alert_rules: dict
-    dashboards: List[GrafanaDashboard]
+    dashboards: List[str]
     # subordinate is no longer used but we should keep it until we bump the library to ensure
     # we don't break compatibility.
     subordinate: Optional[bool] = None
@@ -509,7 +509,7 @@ class CosAgentPeersUnitData(DatabagModel):
     # of the outgoing o11y relations.
     metrics_alert_rules: Optional[dict]
     log_alert_rules: Optional[dict]
-    dashboards: Optional[List[GrafanaDashboard]]
+    dashboards: Optional[List[str]]
 
     # when this whole datastructure is dumped into a databag, it will be nested under this key.
     # while not strictly necessary (we could have it 'flattened out' into the databag),
@@ -737,8 +737,8 @@ class COSAgentProvider(Object):
         return alert_rules.as_dict()
 
     @property
-    def _dashboards(self) -> List[GrafanaDashboard]:
-        dashboards: List[GrafanaDashboard] = []
+    def _dashboards(self) -> List[str]:
+        dashboards: List[str] = []
         for d in self._dashboard_dirs:
             for path in Path(d).glob("*"):
                 with open(path, "rt") as fp:
@@ -1293,7 +1293,7 @@ class COSAgentRequirer(Object):
             seen_apps.append(app_name)
 
             for encoded_dashboard in data.dashboards or ():
-                content = GrafanaDashboard(encoded_dashboard)._deserialize()
+                content = json.loads(LZMABase64.decompress(encoded_dashboard))
 
                 title = content.get("title", "no_title")
 
