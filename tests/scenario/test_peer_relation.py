@@ -13,7 +13,6 @@ from charms.prometheus_k8s.v1.prometheus_remote_write import (
     PrometheusRemoteWriteConsumer,
 )
 from cosl import LZMABase64
-import json
 from ops.charm import CharmBase
 from ops.framework import Framework
 from ops.testing import Context, PeerRelation, State, SubordinateRelation
