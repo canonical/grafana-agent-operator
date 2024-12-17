@@ -234,7 +234,7 @@ from typing import (
 )
 
 import pydantic
-from cosl import GrafanaDashboard, JujuTopology
+from cosl import DashboardPath40UID, JujuTopology, LZMABase64
 from cosl.rules import AlertRules
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
@@ -254,9 +254,10 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 16
+LIBPATCH = 17
 
-PYDEPS = ["cosl", "pydantic"]
+# TODO revert to "cosl" after merged
+PYDEPS = ["cosl >= 0.50.0", "pydantic"]
 
 DEFAULT_RELATION_NAME = "cos-agent"
 DEFAULT_PEER_RELATION_NAME = "peers"
@@ -481,7 +482,7 @@ class CosAgentProviderUnitData(DatabagModel):
     # this needs to make its way to the gagent leader
     metrics_alert_rules: dict
     log_alert_rules: dict
-    dashboards: List[GrafanaDashboard]
+    dashboards: List[str]
     # subordinate is no longer used but we should keep it until we bump the library to ensure
     # we don't break compatibility.
     subordinate: Optional[bool] = None
@@ -514,7 +515,7 @@ class CosAgentPeersUnitData(DatabagModel):
     # of the outgoing o11y relations.
     metrics_alert_rules: Optional[dict]
     log_alert_rules: Optional[dict]
-    dashboards: Optional[List[GrafanaDashboard]]
+    dashboards: Optional[List[str]]
 
     # when this whole datastructure is dumped into a databag, it will be nested under this key.
     # while not strictly necessary (we could have it 'flattened out' into the databag),
@@ -742,12 +743,20 @@ class COSAgentProvider(Object):
         return alert_rules.as_dict()
 
     @property
-    def _dashboards(self) -> List[GrafanaDashboard]:
-        dashboards: List[GrafanaDashboard] = []
+    def _dashboards(self) -> List[str]:
+        dashboards: List[str] = []
         for d in self._dashboard_dirs:
             for path in Path(d).glob("*"):
-                dashboard = GrafanaDashboard._serialize(path.read_bytes())
-                dashboards.append(dashboard)
+                with open(path, "rt") as fp:
+                    dashboard = json.load(fp)
+                rel_path = str(
+                    path.relative_to(self._charm.charm_dir) if path.is_absolute() else path
+                )
+                # COSAgentProvider is somewhat analogous to GrafanaDashboardProvider. We need to overwrite the uid here
+                # because there is currently no other way to communicate the dashboard path separately.
+                # https://github.com/canonical/grafana-k8s-operator/pull/363
+                dashboard["uid"] = DashboardPath40UID.generate(self._charm.meta.name, rel_path)
+                dashboards.append(LZMABase64.compress(json.dumps(dashboard)))
         return dashboards
 
     @property
@@ -1318,7 +1327,7 @@ class COSAgentRequirer(Object):
             seen_apps.append(app_name)
 
             for encoded_dashboard in data.dashboards or ():
-                content = GrafanaDashboard(encoded_dashboard)._deserialize()
+                content = json.loads(LZMABase64.decompress(encoded_dashboard))
 
                 title = content.get("title", "no_title")
 
