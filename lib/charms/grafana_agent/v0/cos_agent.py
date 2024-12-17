@@ -232,7 +232,7 @@ from typing import (
 )
 
 import pydantic
-from cosl import GrafanaDashboard, JujuTopology
+from cosl import GrafanaDashboard, LZMABase64, JujuTopology, generate_dashboard_uid
 from cosl.rules import AlertRules
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
@@ -740,8 +740,14 @@ class COSAgentProvider(Object):
         dashboards: List[GrafanaDashboard] = []
         for d in self._dashboard_dirs:
             for path in Path(d).glob("*"):
-                dashboard = GrafanaDashboard._serialize(path.read_bytes())
-                dashboards.append(dashboard)
+                with open(path, "rt") as fp:
+                    dashboard = json.load(fp)
+                rel_path = str(path.relative_to(self._charm.charm_dir))
+                # COSAgentProvider is analogous to GrafanaDashboardProvider. We need to set the alt_uid so it represents
+                # the dashboard correctly across the ecosystem.
+                # https://github.com/canonical/grafana-k8s-operator/pull/363
+                dashboard["dashboard_alt_uid"] = generate_dashboard_uid(self._charm.meta.name, rel_path)
+                dashboards.append(LZMABase64.compress(json.dumps(dashboard)))
         return dashboards
 
     @property
