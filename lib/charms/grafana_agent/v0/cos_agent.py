@@ -743,7 +743,7 @@ class COSAgentProvider(Object):
             for path in Path(d).glob("*"):
                 with open(path, "rt") as fp:
                     dashboard = json.load(fp)
-                rel_path = str(path.relative_to(self._charm.charm_dir))
+                rel_path = str(path.relative_to(self._charm.charm_dir) if path.is_absolute() else path)
                 # COSAgentProvider is analogous to GrafanaDashboardProvider. We need to set the alt_uid so it represents
                 # the dashboard correctly across the ecosystem.
                 # https://github.com/canonical/grafana-k8s-operator/pull/363
