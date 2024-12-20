@@ -5,11 +5,11 @@ from typing import List
 
 import pydantic
 import pytest
-from charms.grafana_agent.v0.cos_agent import CosAgentProviderUnitData, GrafanaDashboard
+from charms.grafana_agent.v0.cos_agent import CosAgentProviderUnitData, LZMABase64
 
 
 class Foo(pydantic.BaseModel):
-    dash: List[GrafanaDashboard]
+    dash: List[str]
 
 
 def test_dashboard_validation():
@@ -20,7 +20,7 @@ def test_dashboard_validation():
 
 def test_dashboard_serialization():
     raw_dash = {"title": "foo", "bar": "baz"}
-    encoded_dashboard = GrafanaDashboard._serialize(json.dumps(raw_dash))
+    encoded_dashboard = LZMABase64.compress(json.dumps(raw_dash))
     data = Foo(dash=[encoded_dashboard])
     assert data.json() == '{"dash": ["{encoded_dashboard}"]}'.replace(
         "{encoded_dashboard}", encoded_dashboard
@@ -29,7 +29,7 @@ def test_dashboard_serialization():
 
 def test_cos_agent_provider_unit_data_dashboard_serialization():
     raw_dash = {"title": "title", "foo": "bar"}
-    encoded_dashboard = GrafanaDashboard()._serialize(json.dumps(raw_dash))
+    encoded_dashboard = LZMABase64.compress(json.dumps(raw_dash))
     data = CosAgentProviderUnitData(
         metrics_alert_rules={},
         log_alert_rules={},
@@ -51,7 +51,7 @@ def test_cos_agent_provider_unit_data_dashboard_serialization():
 
 def test_dashboard_deserialization_roundtrip():
     raw_dash = {"title": "title", "foo": "bar"}
-    encoded_dashboard = GrafanaDashboard()._serialize(json.dumps(raw_dash))
+    encoded_dashboard = LZMABase64.compress(json.dumps(raw_dash))
     raw = {
         "metrics_alert_rules": {},
         "log_alert_rules": {},
@@ -60,7 +60,7 @@ def test_dashboard_deserialization_roundtrip():
         "dashboards": [encoded_dashboard],
     }
     data = CosAgentProviderUnitData(**raw)
-    assert GrafanaDashboard(data.dashboards[0])._deserialize() == raw_dash
+    assert json.loads(LZMABase64.decompress(data.dashboards[0])) == raw_dash
 
 
 def test_cos_agent_provider_tracing_protocols_are_passed():
