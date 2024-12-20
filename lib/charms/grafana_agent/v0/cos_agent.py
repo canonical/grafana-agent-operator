@@ -252,7 +252,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 12
+LIBPATCH = 13
 
 # TODO revert to "cosl" after merged
 PYDEPS = ["cosl@git+https://github.com/canonical/cos-lib.git@feature/dashboard_module", "pydantic"]
