@@ -232,7 +232,7 @@ from typing import (
 )
 
 import pydantic
-from cosl import JujuTopology, LZMABase64, DashboardPath40UID
+from cosl import DashboardPath40UID, JujuTopology, LZMABase64
 from cosl.rules import AlertRules
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
@@ -749,9 +749,7 @@ class COSAgentProvider(Object):
                 # COSAgentProvider is somewhat analogous to GrafanaDashboardProvider. We need to overwrite the uid here
                 # because there is currently no other way to communicate the dashboard path separately.
                 # https://github.com/canonical/grafana-k8s-operator/pull/363
-                dashboard["uid"] = DashboardPath40UID.generate(
-                    self._charm.meta.name, rel_path
-                )
+                dashboard["uid"] = DashboardPath40UID.generate(self._charm.meta.name, rel_path)
                 dashboards.append(LZMABase64.compress(json.dumps(dashboard)))
         return dashboards
 
