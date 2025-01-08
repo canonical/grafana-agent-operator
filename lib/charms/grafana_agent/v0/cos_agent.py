@@ -1339,7 +1339,6 @@ class COSAgentRequirer(Object):
 def charm_tracing_config(
     endpoint_requirer: COSAgentProvider, cert_path: Optional[Union[Path, str]]
 ) -> Tuple[Optional[str], Optional[str]]:
-    # TODO this probably needs an update - surely about blocked state
     """Utility function to determine the charm_tracing config you will likely want.
 
     If no endpoint is provided:
