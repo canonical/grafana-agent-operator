@@ -805,7 +805,7 @@ class COSAgentProvider(Object):
 
     def _get_tracing_endpoint(
         self, relation: Optional[Relation], protocol: ReceiverProtocol
-    ) -> Optional[str]:
+    ) -> str:
         """Return a tracing endpoint URL if it is available or raise a ProtocolNotFoundError."""
         unit_data = self.get_all_endpoints(relation)
         if not unit_data:
@@ -816,7 +816,6 @@ class COSAgentProvider(Object):
         if not receivers:
             # we didn't find the protocol because grafana-agent didn't return us the protocol that we requested
             # the caller might want to verify that we did indeed request this protocol
-            # TODO put this in the error message maybe?
             raise ProtocolNotFoundError(protocol)
         if len(receivers) > 1:
             logger.warning(
@@ -824,11 +823,14 @@ class COSAgentProvider(Object):
             )
 
         receiver = receivers[0]
+        if not receiver.url:
+            # grafana-agent isn't connected to the tracing backend yet
+            raise ProtocolNotFoundError(protocol)
         return receiver.url
 
     def get_tracing_endpoint(
         self, protocol: ReceiverProtocol, relation: Optional[Relation] = None
-    ) -> Optional[str]:
+    ) -> str:
         """Receiver endpoint for the given protocol.
 
         It could happen that this function gets called before the provider publishes the endpoints.
@@ -842,13 +844,7 @@ class COSAgentProvider(Object):
             If the charm attempts to obtain an endpoint when grafana-agent isn't related to a tracing backend.
         """
         try:
-            endpoint = self._get_tracing_endpoint(relation or self._relation, protocol=protocol)
-            # because of the backwards compatibility requirements, the requirer is returning None
-            # (written as string to the databag) when tracing backend isn't connected.
-            # See more in the comment in `COSAgentRequirer#update_tracing_receivers` in this file.
-            if endpoint == "None":
-                return None
-            return endpoint
+            return self._get_tracing_endpoint(relation or self._relation, protocol=protocol)
         except ProtocolNotFoundError:
             # let's see if we didn't find it because we didn't request the endpoint
             requested_protocols = set()
@@ -1019,9 +1015,12 @@ class COSAgentRequirer(Object):
                             # however, because of the backwards compatibility requirements, we need to still provide
                             # the protocols list so that the charm with older cos_agent version doesn't error its hooks.
                             # before this change was added, the charm with old cos_agent version threw exceptions with
-                            # connections to grafana-agent timing out, after that it will still throw exceptions, but
-                            # faster: `MissingSchema: Invalid URL 'None/v1/traces': No scheme supplied.`
-                            url=f"{self._get_tracing_receiver_url(protocol) if self._charm.tracing.is_ready() else None}",  # type: ignore
+                            # connections to grafana-agent timing out. After the change, the charm will fail validating
+                            # databag contents (as it expects a string in URL) but that won't cause any errors as
+                            # tracing endpoints are the only content in the grafana-agent's side of the databag.
+                            url=f"{self._get_tracing_receiver_url(protocol)}"
+                            if self._charm.tracing.is_ready()  # type: ignore
+                            else None,
                             protocol=ProtocolType(
                                 name=protocol,
                                 type=receiver_protocol_to_transport_protocol[protocol],
