@@ -1346,7 +1346,7 @@ def charm_tracing_config(
     If https endpoint is provided but cert_path is not found on disk:
      disable charm tracing.
     If https endpoint is provided and cert_path is None:
-     ERROR
+     raise TracingError
     Else:
      proceed with charm tracing (with or without tls, as appropriate)
 
