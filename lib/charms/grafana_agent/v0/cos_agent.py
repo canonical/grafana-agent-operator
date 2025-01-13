@@ -252,7 +252,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 12
+LIBPATCH = 13
 
 PYDEPS = ["cosl", "pydantic"]
 
@@ -266,6 +266,39 @@ DEFAULT_SCRAPE_CONFIG = {
 logger = logging.getLogger(__name__)
 SnapEndpoint = namedtuple("SnapEndpoint", "owner, name")
 
+GENERIC_ALERT_RULES_GROUP = {
+    "groups": [
+        {
+            "name": "HostHealth",
+            "rules": [
+                {
+                    "alert": "HostDown",
+                    "expr": "up < 1",
+                    "for": "5m",
+                    "labels": {"severity": "critical"},
+                    "annotations": {
+                        "summary": "Host '{{ $labels.instance }}' is down.",
+                        "description": """Host '{{ $labels.instance }}' is down, failed to scrape.
+                            VALUE = {{ $value }}
+                            LABELS = {{ $labels }}""",
+                    },
+                },
+                {
+                    "alert": "HostMetricsMissing",
+                    "expr": "absent(up)",
+                    "for": "5m",
+                    "labels": {"severity": "critical"},
+                    "annotations": {
+                        "summary": "Metrics not received from host '{{ $labels.instance }}', failed to remote write.",
+                        "description": """Metrics not received from host '{{ $labels.instance }}', failed to remote write.
+                            VALUE = {{ $value }}
+                            LABELS = {{ $labels }}""",
+                    },
+                },
+            ],
+        }
+    ]
+}
 
 # Note: MutableMapping is imported from the typing module and not collections.abc
 # because subscripting collections.abc.MutableMapping was added in python 3.9, but
@@ -726,6 +759,7 @@ class COSAgentProvider(Object):
             query_type="promql", topology=JujuTopology.from_charm(self._charm)
         )
         alert_rules.add_path(self._metrics_rules, recursive=self._recursive)
+        alert_rules.add(GENERIC_ALERT_RULES_GROUP, group_name_prefix=JujuTopology.from_charm(self._charm).identifier)
         return alert_rules.as_dict()
 
     @property
