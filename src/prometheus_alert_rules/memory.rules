@@ -36,17 +36,11 @@ groups:
         The 5-minute-ahead prediction is made as a linear regression from the last 30 minutes of data.
   - alert: HostMemoryFull
     expr: |
-      100 *
-        (
-          (
-            avg_over_time(node_memory_MemTotal_bytes[1m])
-            - avg_over_time(node_memory_MemFree_bytes[1m])
-          ) - avg_over_time(node_memory_Hugetlb_bytes[1m])
-        ) /
+      100 * avg_over_time(node_memory_MemFree_bytes[1m]) /
         (
           avg_over_time(node_memory_MemTotal_bytes[1m])
           - avg_over_time(node_memory_Hugetlb_bytes[1m])
-        ) > 90
+        ) < 10
     for: 2m
     labels:
       severity: critical
