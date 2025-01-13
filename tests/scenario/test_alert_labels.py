@@ -120,7 +120,7 @@ def test_metrics_alert_rule_labels(charm_config):
     )
     for group in alert_rules["groups"]:
         for rule in group["rules"]:
-            if "grafana-agent_alertgroup_alerts" in group["name"]:
+            if "grafana_agent_alertgroup_alerts" in group["name"]:
                 assert (
                     rule["labels"]["juju_application"] == "primary"
                     or rule["labels"]["juju_application"] == "subordinate"
