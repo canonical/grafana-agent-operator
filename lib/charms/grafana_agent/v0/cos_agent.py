@@ -759,7 +759,10 @@ class COSAgentProvider(Object):
             query_type="promql", topology=JujuTopology.from_charm(self._charm)
         )
         alert_rules.add_path(self._metrics_rules, recursive=self._recursive)
-        alert_rules.add(GENERIC_ALERT_RULES_GROUP, group_name_prefix=JujuTopology.from_charm(self._charm).identifier)
+        alert_rules.add(
+            GENERIC_ALERT_RULES_GROUP,
+            group_name_prefix=JujuTopology.from_charm(self._charm).identifier,
+        )
         return alert_rules.as_dict()
 
     @property
@@ -801,7 +804,7 @@ class COSAgentProvider(Object):
         """Is this endpoint ready?"""
         relation = relation or self._relation
         if not relation:
-            logger.debug(f"no relation on {self._relation_name !r}: tracing not ready")
+            logger.debug(f"no relation on {self._relation_name!r}: tracing not ready")
             return False
         if relation.data is None:
             logger.error(f"relation data is None for {relation}")
@@ -1063,8 +1066,7 @@ class COSAgentRequirer(Object):
         if len(units) > 1:
             # should never happen
             raise ValueError(
-                f"unexpected error: subordinate relation {relation} "
-                f"should have exactly one unit"
+                f"unexpected error: subordinate relation {relation} should have exactly one unit"
             )
 
         unit = next(iter(units), None)

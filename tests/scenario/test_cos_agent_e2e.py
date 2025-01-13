@@ -129,7 +129,16 @@ def test_cos_agent_changed_no_remote_data(provider_ctx):
     config = json.loads(
         state_out.get_relation(cos_agent.id).local_unit_data[CosAgentPeersUnitData.KEY]
     )
-    assert config["metrics_alert_rules"] == {}
+
+    # the cos_agent lib injects generic (HostHealth) alert rules and should be filtered for the test
+    filtered_groups = [
+        group
+        for group in config["metrics_alert_rules"]["groups"]
+        if "_HostHealth_" not in group["name"]
+    ]
+    config["metrics_alert_rules"]["groups"] = filtered_groups
+
+    assert config["metrics_alert_rules"] == {"groups": []}
     assert config["log_alert_rules"] == {}
     assert len(config["dashboards"]) == 1
     assert len(config["metrics_scrape_jobs"]) == 1
