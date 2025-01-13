@@ -252,7 +252,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 12
+LIBPATCH = 13
 
 PYDEPS = ["cosl", "pydantic"]
 
@@ -767,7 +767,7 @@ class COSAgentProvider(Object):
         """Is this endpoint ready?"""
         relation = relation or self._relation
         if not relation:
-            logger.debug(f"no relation on {self._relation_name !r}: tracing not ready")
+            logger.debug(f"no relation on {self._relation_name!r}: tracing not ready")
             return False
         if relation.data is None:
             logger.error(f"relation data is None for {relation}")
@@ -1029,8 +1029,7 @@ class COSAgentRequirer(Object):
         if len(units) > 1:
             # should never happen
             raise ValueError(
-                f"unexpected error: subordinate relation {relation} "
-                f"should have exactly one unit"
+                f"unexpected error: subordinate relation {relation} should have exactly one unit"
             )
 
         unit = next(iter(units), None)
