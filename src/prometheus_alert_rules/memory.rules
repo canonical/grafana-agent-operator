@@ -35,6 +35,7 @@ groups:
           LABELS = {{ $labels }}
         The 5-minute-ahead prediction is made as a linear regression from the last 30 minutes of data.
   - alert: HostMemoryFull
+    # The difference of averages is more robust (less noisy) than computing the average at the end
     expr: |
       100 * avg_over_time(node_memory_MemFree_bytes[1m]) /
         (
