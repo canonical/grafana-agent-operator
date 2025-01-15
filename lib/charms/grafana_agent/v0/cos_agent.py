@@ -252,7 +252,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 13
+LIBPATCH = 14
 
 PYDEPS = ["cosl", "pydantic"]
 
@@ -1004,8 +1004,6 @@ class COSAgentRequirer(Object):
 
     def update_tracing_receivers(self):
         """Updates the list of exposed tracing receivers in all relations."""
-        requested_tracing_protocols = self.requested_tracing_protocols()
-
         try:
             for relation in self._charm.model.relations[self._relation_name]:
                 CosAgentRequirerUnitData(
@@ -1026,7 +1024,7 @@ class COSAgentRequirer(Object):
                                 type=receiver_protocol_to_transport_protocol[protocol],
                             ),
                         )
-                        for protocol in requested_tracing_protocols
+                        for protocol in self.requested_tracing_protocols()
                     ],
                 ).dump(relation.data[self._charm.unit])
 
