@@ -104,6 +104,7 @@ def requirer_charm():
                 self,
                 refresh_events=[self.on.cos_agent_relation_changed],
             )
+            self.tracing = MagicMock()
 
     return MySubordinate
 

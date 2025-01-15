@@ -175,7 +175,7 @@ class GrafanaAgentCharm(CharmBase):
         )
         self.framework.observe(self.cert.on.cert_changed, self._on_cert_changed)  # pyright: ignore
 
-        self._tracing = TracingEndpointRequirer(
+        self.tracing = TracingEndpointRequirer(
             self,
             protocols=[
                 "otlp_http",  # for charm traces
@@ -183,19 +183,11 @@ class GrafanaAgentCharm(CharmBase):
             ],
         )
         self._charm_tracing_endpoint, self._server_cert = charm_tracing_config(
-            self._tracing, self._ca_path
+            self.tracing, self._ca_path
         )
 
         self._cloud = GrafanaCloudConfigRequirer(self)
 
-        self.framework.observe(
-            self._tracing.on.endpoint_changed,  # pyright: ignore
-            self.on_tracing_endpoint_changed,
-        )
-        self.framework.observe(
-            self._tracing.on.endpoint_removed,  # pyright: ignore
-            self.on_tracing_endpoint_removed,
-        )
         self.framework.observe(
             self._cloud.on.cloud_config_available,  # pyright: ignore
             self._on_cloud_config_available,
@@ -489,16 +481,6 @@ class GrafanaAgentCharm(CharmBase):
         self._update_status()
         self._update_metrics_alerts()
 
-    def on_tracing_endpoint_changed(self, _event) -> None:
-        """Event handler for the tracing endpoint-changed event."""
-        self._update_config()
-        self._update_status()
-
-    def on_tracing_endpoint_removed(self, _event) -> None:
-        """Event handler for the tracing endpoint-removed event."""
-        self._update_config()
-        self._update_status()
-
     def _update_status(self, *_):
         """Determine the charm status based on relation health and grafana-agent service readiness.
 
@@ -685,13 +667,13 @@ class GrafanaAgentCharm(CharmBase):
         FIXME: these should be separate concerns.
         """
         tempo_endpoints = []
-        if self._tracing.is_ready():
+        if self.tracing.is_ready():
             tempo_endpoints.append(
                 {
                     # outgoing traces are all otlp/grpc
                     # cit: While Tempo and the Agent both can ingest in multiple formats,
                     #  the Agent only exports in OTLP gRPC and HTTP.
-                    "endpoint": self._tracing.get_endpoint("otlp_grpc"),
+                    "endpoint": self.tracing.get_endpoint("otlp_grpc"),
                     "insecure": False if self.cert.enabled else True,
                 }
             )
@@ -831,7 +813,7 @@ class GrafanaAgentCharm(CharmBase):
         Returns:
             a dict with the receivers config.
         """
-        if not self._tracing.is_ready():
+        if not self.tracing.is_ready():
             return {}
 
         receivers_set = self.requested_tracing_protocols

@@ -196,6 +196,16 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.remove, self._on_remove)
+        # we need to observe these events in the charm as change of tracing endpoint may result in removing a receiver
+        # in the databags for charms related with us over cos-agent
+        self.framework.observe(
+            self.tracing.on.endpoint_changed,  # pyright: ignore
+            self._on_tracing_endpoint_changed,
+        )
+        self.framework.observe(
+            self.tracing.on.endpoint_removed,  # pyright: ignore
+            self._on_tracing_endpoint_removed,
+        )
 
     @property
     def snap(self):
@@ -228,6 +238,18 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             logger.error(msg)
 
         self._update_status()
+
+    def _on_tracing_endpoint_changed(self, _event) -> None:
+        """Event handler for the tracing endpoint-changed event."""
+        super()._update_config()
+        super()._update_status()
+        self._cos.update_tracing_receivers()
+
+    def _on_tracing_endpoint_removed(self, _event) -> None:
+        """Event handler for the tracing endpoint-removed event."""
+        super()._update_config()
+        super()._update_status()
+        self._cos.update_tracing_receivers()
 
     def _verify_snap_track(self) -> None:
         try:
