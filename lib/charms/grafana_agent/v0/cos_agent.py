@@ -233,7 +233,7 @@ from typing import (
 
 import pydantic
 from cosl import GrafanaDashboard, JujuTopology
-from cosl.rules import AlertRules
+from cosl.rules import AlertRules, generic_alert_groups
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
 from ops.model import ModelError, Relation
@@ -265,40 +265,6 @@ DEFAULT_SCRAPE_CONFIG = {
 
 logger = logging.getLogger(__name__)
 SnapEndpoint = namedtuple("SnapEndpoint", "owner, name")
-
-GENERIC_ALERT_RULES_GROUP = {
-    "groups": [
-        {
-            "name": "HostHealth",
-            "rules": [
-                {
-                    "alert": "HostDown",
-                    "expr": "up < 1",
-                    "for": "5m",
-                    "labels": {"severity": "critical"},
-                    "annotations": {
-                        "summary": "Host '{{ $labels.instance }}' is down.",
-                        "description": """Host '{{ $labels.instance }}' is down, failed to scrape.
-                            VALUE = {{ $value }}
-                            LABELS = {{ $labels }}""",
-                    },
-                },
-                {
-                    "alert": "HostMetricsMissing",
-                    "expr": "absent(up)",
-                    "for": "5m",
-                    "labels": {"severity": "critical"},
-                    "annotations": {
-                        "summary": "Metrics not received from host '{{ $labels.instance }}', failed to remote write.",
-                        "description": """Metrics not received from host '{{ $labels.instance }}', failed to remote write.
-                            VALUE = {{ $value }}
-                            LABELS = {{ $labels }}""",
-                    },
-                },
-            ],
-        }
-    ]
-}
 
 # Note: MutableMapping is imported from the typing module and not collections.abc
 # because subscripting collections.abc.MutableMapping was added in python 3.9, but
@@ -760,7 +726,7 @@ class COSAgentProvider(Object):
         )
         alert_rules.add_path(self._metrics_rules, recursive=self._recursive)
         alert_rules.add(
-            GENERIC_ALERT_RULES_GROUP,
+            generic_alert_groups.application_rules,
             group_name_prefix=JujuTopology.from_charm(self._charm).identifier,
         )
         return alert_rules.as_dict()
