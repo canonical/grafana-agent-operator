@@ -65,6 +65,7 @@ class MyRequirerCharm(CharmBase):
         super().__init__(framework)
         self.cosagent = COSAgentRequirer(self)
         self.prom = PrometheusRemoteWriteConsumer(self)
+        self.tracing = MagicMock()
         framework.observe(self.cosagent.on.data_changed, self._on_cosagent_data_changed)
 
     def _on_cosagent_data_changed(self, _):
