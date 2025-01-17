@@ -127,7 +127,7 @@ class GrafanaAgentCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        subprocess.run("umask o-rx,g-r")
+        subprocess.run("umask o-rx,g=r")
 
         # Property to facilitate centralized status update
         self.status = CompoundStatus()
