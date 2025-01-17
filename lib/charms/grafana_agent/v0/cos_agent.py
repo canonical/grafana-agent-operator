@@ -8,7 +8,8 @@ This library can be used to manage the cos_agent relation interface:
 - `COSAgentProvider`: Use in machine charms that need to have a workload's metrics
   or logs scraped, or forward rule files or dashboards to Prometheus, Loki or Grafana through
   the Grafana Agent machine charm.
-  NOTE: Be sure to add `limit: 1` in your charm for the cos-agent relation.
+  NOTE: Be sure to add `limit: 1` in your charm for the cos-agent relation. That is the only
+   way we currently have to prevent two different grafana agent apps deployed on the same VM.
 
 - `COSAgentConsumer`: Used in the Grafana Agent machine charm to manage the requirer side of
   the `cos_agent` interface.
