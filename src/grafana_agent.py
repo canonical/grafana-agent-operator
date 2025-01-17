@@ -8,6 +8,7 @@ import logging
 import os
 import pathlib
 import re
+import subprocess
 import shutil
 import socket
 from collections import namedtuple
@@ -126,6 +127,7 @@ class GrafanaAgentCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+        subprocess.run("umask o-rx,g-r")
 
         # Property to facilitate centralized status update
         self.status = CompoundStatus()
