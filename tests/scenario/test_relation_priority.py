@@ -90,7 +90,7 @@ def test_cos_machine_relation(mock_run, charm_config):
                 "relation_name": "peers",
                 "metrics_alert_rules": {},
                 "log_alert_rules": {},
-                "dashboards": [LZMABase64.compress(json.dumps('{"very long": "dashboard"}'))],
+                "dashboards": [LZMABase64.compress('{"very long": "dashboard"}')],
             }
         )
     }
@@ -147,7 +147,7 @@ def test_both_relations(mock_run, charm_config):
                 "relation_name": "peers",
                 "metrics_alert_rules": {},
                 "log_alert_rules": {},
-                "dashboards": [LZMABase64.compress(json.dumps('{"very long": "dashboard"}'))],
+                "dashboards": [LZMABase64.compress('{"very long": "dashboard"}')],
             }
         )
     }
