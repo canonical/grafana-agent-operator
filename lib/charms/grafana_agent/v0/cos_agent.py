@@ -256,7 +256,6 @@ LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
 LIBPATCH = 17
 
-# TODO revert to "cosl" after merged
 PYDEPS = ["cosl >= 0.50.0", "pydantic"]
 
 DEFAULT_RELATION_NAME = "cos-agent"
