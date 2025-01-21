@@ -8,9 +8,9 @@ import logging
 import os
 import pathlib
 import re
-import subprocess
 import shutil
 import socket
+import subprocess
 from collections import namedtuple
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
