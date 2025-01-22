@@ -126,6 +126,7 @@ class GrafanaAgentCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+        os.umask(0o077)
 
         # Property to facilitate centralized status update
         self.status = CompoundStatus()
@@ -133,13 +134,13 @@ class GrafanaAgentCharm(CharmBase):
         charm_root = self.charm_dir.absolute()
         self.loki_rules_paths = RulesMapping(
             # TODO how to inject topology only for this charm's own rules?
-            # FIXED: this is already handled by re-using the *Rules classes
+            # FIXED: this is already handled by reusing the *Rules classes
             src=charm_root.joinpath(*LOKI_RULES_SRC_PATH.split("/")),
             dest=charm_root.joinpath(*LOKI_RULES_DEST_PATH.split("/")),
         )
         self.metrics_rules_paths = RulesMapping(
             # TODO how to inject topology only for this charm's own rules?
-            # FIXED: this is already handled by re-using the *Rules classes
+            # FIXED: this is already handled by reusing the *Rules classes
             src=charm_root.joinpath(*METRICS_RULES_SRC_PATH.split("/")),
             dest=charm_root.joinpath(*METRICS_RULES_DEST_PATH.split("/")),
         )
