@@ -10,7 +10,6 @@ import pathlib
 import re
 import shutil
 import socket
-import subprocess
 from collections import namedtuple
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
@@ -127,7 +126,7 @@ class GrafanaAgentCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
-        subprocess.run(["umask", "o-rwx,g-rwx"])
+        os.umask(0o077)
 
         # Property to facilitate centralized status update
         self.status = CompoundStatus()
