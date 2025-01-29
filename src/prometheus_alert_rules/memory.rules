@@ -37,7 +37,7 @@ groups:
   - alert: HostMemoryFull
     # The difference of averages is more robust (less noisy) than computing the average at the end
     expr: |
-      100 * avg_over_time(node_memory_MemFree_bytes[1m]) /
+      100 * avg_over_time(node_memory_MemAvailable_bytes[1m]) /
         (
           avg_over_time(node_memory_MemTotal_bytes[1m])
           - avg_over_time(node_memory_Hugetlb_bytes[1m])
