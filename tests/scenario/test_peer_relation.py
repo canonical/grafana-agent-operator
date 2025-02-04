@@ -12,14 +12,14 @@ from charms.grafana_agent.v0.cos_agent import (
 from charms.prometheus_k8s.v1.prometheus_remote_write import (
     PrometheusRemoteWriteConsumer,
 )
-from cosl import GrafanaDashboard
+from cosl import LZMABase64
 from ops.charm import CharmBase
 from ops.framework import Framework
 from ops.testing import Context, PeerRelation, State, SubordinateRelation
 
 
 def encode_as_dashboard(dct: dict):
-    return GrafanaDashboard._serialize(json.dumps(dct).encode("utf-8"))
+    return LZMABase64.compress(json.dumps(dct))
 
 
 def test_fetch_data_from_relation():
@@ -48,7 +48,7 @@ def test_fetch_data_from_relation():
     data_peer_1 = data[0]
     assert len(data_peer_1.dashboards) == 1
     dash_out_raw = data_peer_1.dashboards[0]
-    assert GrafanaDashboard(dash_out_raw)._deserialize() == py_dash
+    assert json.loads(LZMABase64.decompress(dash_out_raw)) == py_dash
 
 
 class MyRequirerCharm(CharmBase):
@@ -65,6 +65,7 @@ class MyRequirerCharm(CharmBase):
         super().__init__(framework)
         self.cosagent = COSAgentRequirer(self)
         self.prom = PrometheusRemoteWriteConsumer(self)
+        self.tracing = MagicMock()
         framework.observe(self.cosagent.on.data_changed, self._on_cosagent_data_changed)
 
     def _on_cosagent_data_changed(self, _):
