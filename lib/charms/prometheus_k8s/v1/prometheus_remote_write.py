@@ -477,13 +477,9 @@ class PrometheusRemoteWriteConsumer(Object):
         self.on.endpoints_changed.emit(relation_id=event.relation.id)
 
     def _push_alerts_on_relation_joined(self, event: RelationEvent) -> None:
-        if not self._alert_rules_path:
-            return
         self._push_alerts_to_relation_databag(event.relation)
 
     def _push_alerts_to_all_relation_databags(self, _: Optional[HookEvent]) -> None:
-        if not self._alert_rules_path:
-            return
         for relation in self.model.relations[self._relation_name]:
             self._push_alerts_to_relation_databag(relation)
 
@@ -491,11 +487,9 @@ class PrometheusRemoteWriteConsumer(Object):
         if not self._charm.unit.is_leader():
             return
 
-        if not self._alert_rules_path:
-            return
-
         alert_rules = AlertRules(query_type="promql", topology=self.topology)
-        alert_rules.add_path(self._alert_rules_path)
+        if self._alert_rules_path:
+            alert_rules.add_path(self._alert_rules_path)
 
         alert_rules_as_dict = alert_rules.as_dict()
 
