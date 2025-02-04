@@ -155,9 +155,10 @@ class GrafanaAgentCharm(CharmBase):
                 rules.src.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(rules.src, rules.dest, dirs_exist_ok=True)
 
-        self._remote_write = PrometheusRemoteWriteConsumer(
-            self, alert_rules_path=self.metrics_rules_paths.dest
-        )
+        alert_rules_path = self.metrics_rules_paths.dest
+        if self.config["disable_forwarding_alert_rules"]:
+            alert_rules_path = None
+        self._remote_write = PrometheusRemoteWriteConsumer(self, alert_rules_path=alert_rules_path)
 
         self._loki_consumer = LokiPushApiConsumer(
             self, relation_name="logging-consumer", alert_rules_path=self.loki_rules_paths.dest

@@ -46,7 +46,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 PYDEPS = ["cosl"]
 
@@ -400,7 +400,7 @@ class PrometheusRemoteWriteConsumer(Object):
         self,
         charm: CharmBase,
         relation_name: str = DEFAULT_CONSUMER_NAME,
-        alert_rules_path: str = DEFAULT_ALERT_RULES_RELATIVE_PATH,
+        alert_rules_path: Optional[str] = DEFAULT_ALERT_RULES_RELATIVE_PATH,
     ):
         """API to manage a required relation with the `prometheus_remote_write` interface.
 
@@ -409,6 +409,7 @@ class PrometheusRemoteWriteConsumer(Object):
             relation_name: Name of the relation with the `prometheus_remote_write` interface as
                 defined in metadata.yaml.
             alert_rules_path: Path of the directory containing the alert rules.
+                If set to None, it will disable alert rule forwarding.
 
         Raises:
             RelationNotFoundError: If there is no relation in the charm's metadata.yaml
@@ -425,7 +426,10 @@ class PrometheusRemoteWriteConsumer(Object):
         )
 
         try:
-            alert_rules_path = _resolve_dir_against_charm_path(charm, alert_rules_path)
+            if alert_rules_path:
+                alert_rules_path = _resolve_dir_against_charm_path(charm, alert_rules_path)
+            else:
+                logger.debug("alert_rules_path is None: sending no alert rules")
         except InvalidAlertRulePathError as e:
             logger.debug(
                 "Invalid Prometheus alert rules folder at %s: %s",
@@ -473,14 +477,21 @@ class PrometheusRemoteWriteConsumer(Object):
         self.on.endpoints_changed.emit(relation_id=event.relation.id)
 
     def _push_alerts_on_relation_joined(self, event: RelationEvent) -> None:
+        if not self._alert_rules_path:
+            return
         self._push_alerts_to_relation_databag(event.relation)
 
     def _push_alerts_to_all_relation_databags(self, _: Optional[HookEvent]) -> None:
+        if not self._alert_rules_path:
+            return
         for relation in self.model.relations[self._relation_name]:
             self._push_alerts_to_relation_databag(relation)
 
     def _push_alerts_to_relation_databag(self, relation: Relation) -> None:
         if not self._charm.unit.is_leader():
+            return
+
+        if not self._alert_rules_path:
             return
 
         alert_rules = AlertRules(query_type="promql", topology=self.topology)
@@ -493,6 +504,8 @@ class PrometheusRemoteWriteConsumer(Object):
 
     def reload_alerts(self) -> None:
         """Reload alert rules from disk and push to relation data."""
+        if not self._alert_rules_path:
+            return
         self._push_alerts_to_all_relation_databags(None)
 
     @property
