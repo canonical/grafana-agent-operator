@@ -11,7 +11,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union, get_args
+from typing import Any, Dict, List, Optional, Set, Union, cast, get_args
 
 import yaml
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, ReceiverProtocol

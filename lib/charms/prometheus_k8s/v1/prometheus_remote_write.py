@@ -400,7 +400,8 @@ class PrometheusRemoteWriteConsumer(Object):
         self,
         charm: CharmBase,
         relation_name: str = DEFAULT_CONSUMER_NAME,
-        alert_rules_path: Optional[str] = DEFAULT_ALERT_RULES_RELATIVE_PATH,
+        alert_rules_path: str = DEFAULT_ALERT_RULES_RELATIVE_PATH,
+        disable_forwarding_alert_rules: bool = False,
     ):
         """API to manage a required relation with the `prometheus_remote_write` interface.
 
@@ -409,7 +410,7 @@ class PrometheusRemoteWriteConsumer(Object):
             relation_name: Name of the relation with the `prometheus_remote_write` interface as
                 defined in metadata.yaml.
             alert_rules_path: Path of the directory containing the alert rules.
-                If set to None, it will disable alert rule forwarding.
+            disable_forwarding_alert_rules: Flag to toggle alert rule forwarding.
 
         Raises:
             RelationNotFoundError: If there is no relation in the charm's metadata.yaml
@@ -426,10 +427,7 @@ class PrometheusRemoteWriteConsumer(Object):
         )
 
         try:
-            if alert_rules_path:
-                alert_rules_path = _resolve_dir_against_charm_path(charm, alert_rules_path)
-            else:
-                logger.debug("alert_rules_path is None: sending no alert rules")
+            alert_rules_path = _resolve_dir_against_charm_path(charm, alert_rules_path)
         except InvalidAlertRulePathError as e:
             logger.debug(
                 "Invalid Prometheus alert rules folder at %s: %s",
@@ -441,6 +439,7 @@ class PrometheusRemoteWriteConsumer(Object):
         self._charm = charm
         self._relation_name = relation_name
         self._alert_rules_path = alert_rules_path
+        self._disable_alerts = disable_forwarding_alert_rules
 
         self.topology = JujuTopology.from_charm(charm)
 
@@ -456,6 +455,9 @@ class PrometheusRemoteWriteConsumer(Object):
         )
         self.framework.observe(
             self._charm.on.upgrade_charm, self._push_alerts_to_all_relation_databags
+        )
+        self.framework.observe(
+            self._charm.on.config_changed, self._push_alerts_to_all_relation_databags
         )
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
@@ -488,18 +490,16 @@ class PrometheusRemoteWriteConsumer(Object):
             return
 
         alert_rules = AlertRules(query_type="promql", topology=self.topology)
-        if self._alert_rules_path:
+        if not self._disable_alerts:
             alert_rules.add_path(self._alert_rules_path)
 
         alert_rules_as_dict = alert_rules.as_dict()
 
-        if alert_rules_as_dict:
+        if alert_rules_as_dict or self._disable_alerts:
             relation.data[self._charm.app]["alert_rules"] = json.dumps(alert_rules_as_dict)
 
     def reload_alerts(self) -> None:
         """Reload alert rules from disk and push to relation data."""
-        if not self._alert_rules_path:
-            return
         self._push_alerts_to_all_relation_databags(None)
 
     @property
