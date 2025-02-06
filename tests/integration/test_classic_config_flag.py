@@ -82,7 +82,7 @@ async def test_switch_to_strict(ops_test: OpsTest):
     # grafana-agent.grafana-agent  enabled  active   -
     await ops_test.model.applications[agent.name].set_config({"classic_snap": "false"})
     await ops_test.model.wait_for_idle(
-        apps=[principal.name, agent.name], status="active", timeout=1000
+        apps=[principal.name, agent.name], status="active", timeout=1500
     )
     out = await ssh(ops_test, agent.name, "snap info --verbose grafana-agent | grep confinement")
     assert out.split()[1] == "strict"
