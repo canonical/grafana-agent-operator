@@ -231,8 +231,8 @@ config:
         Ref (__path_exclude__): https://grafana.com/docs/loki/latest/send-data/promtail/scraping/
       type: string
       default: ""
-    disable_forwarding_alert_rules:
+    forward_alert_rules:
       description: >
         Toggle forwarding of alert rules.
       type: boolean
-      default: false
+      default: true

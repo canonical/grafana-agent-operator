@@ -132,7 +132,7 @@ class GrafanaAgentCharm(CharmBase):
         self.status = CompoundStatus()
 
         charm_root = self.charm_dir.absolute()
-        self._disable_alerts = cast(bool, self.config["disable_forwarding_alert_rules"])
+        self._forward_alert_rules = cast(bool, self.config["forward_alert_rules"])
         self.loki_rules_paths = RulesMapping(
             # TODO how to inject topology only for this charm's own rules?
             # FIXED: this is already handled by reusing the *Rules classes
@@ -160,7 +160,8 @@ class GrafanaAgentCharm(CharmBase):
         self._remote_write = PrometheusRemoteWriteConsumer(
             self,
             alert_rules_path=alert_rules_path,
-            disable_forwarding_alert_rules=self._disable_alerts,
+            forward_alert_rules=self._forward_alert_rules,
+            refresh_event=[self.on.config_changed],
         )
 
         self._loki_consumer = LokiPushApiConsumer(
