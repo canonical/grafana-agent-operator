@@ -966,7 +966,7 @@ class COSAgentRequirer(Object):
             self.on.data_changed.emit()  # pyright: ignore
 
     def _on_relation_departed(self, event):
-        """Remove a cos agent provider's alert rules and dashboards from peer data when cos agent provider departs."""
+        """Remove provider's (principal's) alert rules and dashboards from peer data when the cos-agent relation to the principal is removed."""
         if not self.peer_relation:
             event.defer()
             return
