@@ -933,6 +933,8 @@ class COSAgentRequirer(Object):
             events.relation_joined, self._on_relation_data_changed
         )  # TODO: do we need this?
         self.framework.observe(events.relation_changed, self._on_relation_data_changed)
+        self.framework.observe(events.relation_departed, self._on_relation_departed)
+
         for event in self._refresh_events:
             self.framework.observe(event, self.trigger_refresh)  # pyright: ignore
 
@@ -944,7 +946,6 @@ class COSAgentRequirer(Object):
         # )
         peer_events = self._charm.on[peer_relation_name]
         self.framework.observe(peer_events.relation_changed, self._on_peer_relation_changed)
-        self.framework.observe(events.relation_departed, self._on_relation_departed)
 
     @property
     def peer_relation(self) -> Optional["Relation"]:
@@ -962,10 +963,11 @@ class COSAgentRequirer(Object):
             self.on.data_changed.emit()  # pyright: ignore
 
     def _on_relation_departed(self, event):
+        """Remove a cos agent provider's alert rules and dashboards from peer data when cos agent provider departs."""
         if not self.peer_relation:
             event.defer()
             return
-        # empty the peer data for this relation
+        # empty the departing unit's alert rules and dashboards from peer data
         data = CosAgentPeersUnitData(
             unit_name=event.unit.name,
             relation_id=str(event.relation.id),
