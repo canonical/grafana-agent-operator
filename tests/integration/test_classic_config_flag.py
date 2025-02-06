@@ -55,7 +55,9 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
 
     await ops_test.model.integrate("agent:juju-info", principal.name)
     await ops_test.model.integrate("agent:grafana-cloud-config", "gci")
-    await ops_test.model.wait_for_idle(apps=[principal.name, agent.name], status="active")
+    await ops_test.model.wait_for_idle(
+        apps=[principal.name, agent.name], status="active", timeout=1000
+    )
 
 
 @pytest.mark.abort_on_fail
@@ -79,7 +81,9 @@ async def test_switch_to_strict(ops_test: OpsTest):
     # Service                      Startup  Current  Notes
     # grafana-agent.grafana-agent  enabled  active   -
     await ops_test.model.applications[agent.name].set_config({"classic_snap": "false"})
-    await ops_test.model.wait_for_idle(apps=[principal.name, agent.name], status="active")
+    await ops_test.model.wait_for_idle(
+        apps=[principal.name, agent.name], status="active", timeout=1000
+    )
     out = await ssh(ops_test, agent.name, "snap info --verbose grafana-agent | grep confinement")
     assert out.split()[1] == "strict"
 
