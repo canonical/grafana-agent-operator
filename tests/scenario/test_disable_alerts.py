@@ -9,13 +9,9 @@ from ops.testing import Context, PeerRelation, Relation, State, SubordinateRelat
 import charm
 
 
-@pytest.fixture(autouse=True)
-def use_mock_config_path(mock_config_path):
-    # Use the common mock_config_path fixture from conftest.py
-    yield
-
-
-def test_forward_alert_rules_toggle():
+@pytest.mark.parametrize("forwarding", (True, False))
+def test_forward_alert_rules(mock_config_path, forwarding):
+    # GIVEN these relations
     cos_agent_data = {
         "config": json.dumps(
             {
@@ -37,31 +33,30 @@ def test_forward_alert_rules_toggle():
     cos_agent_relation = SubordinateRelation(
         "cos-agent", remote_app_name="hardware-observer", remote_unit_data=cos_agent_data
     )
-
     prometheus_relation = Relation(
         endpoint="send-remote-write",
         remote_app_name="prometheus",
-        local_unit_data={"remote_write": json.dumps({"url": "http://1.2.3.4/api/v1/write"})},
-    )
-
-    ctx = Context(
-        charm_type=charm.GrafanaAgentMachineCharm,
     )
     state = State(
+        leader=True,
         relations=[
             cos_agent_relation,
             prometheus_relation,
             SubordinateRelation("juju-info", remote_app_name="remote-juju-info"),
             PeerRelation("peers"),
         ],
-        config={"forward_alert_rules": True},
+        config={"forward_alert_rules": forwarding},
+    )
+    # WHEN the charm receives a cos-agent-relation-changed event
+    ctx = Context(
+        charm_type=charm.GrafanaAgentMachineCharm,
     )
     with ctx(ctx.on.relation_changed(cos_agent_relation), state) as mgr:
         output_state = mgr.run()
+        # THEN the charm can access the alerts
         assert mgr.charm._cos.logs_alerts
         assert mgr.charm._cos.metrics_alerts
 
-    with ctx(ctx.on.config_changed(), state) as mgr:
-        prometheus_relation_out = output_state.get_relation(prometheus_relation.id)
-        print("+++")
-        print(prometheus_relation_out)
+    # AND THEN the charm forwards the remote_write config to the prom relation IF forwarding
+    prometheus_relation_out = output_state.get_relation(prometheus_relation.id)
+    assert bool(prometheus_relation_out.local_unit_data.get('alert_rules')) is forwarding
