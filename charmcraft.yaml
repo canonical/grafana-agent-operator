@@ -15,13 +15,39 @@ links:
   source: https://github.com/canonical/grafana-agent-operator
   issues: https://github.com/canonical/grafana-agent-operator/issues
 
-platforms:
-  ubuntu@20.04:amd64:
-  ubuntu@20.04:arm64:
-  ubuntu@22.04:amd64:
-  ubuntu@22.04:arm64:
-  ubuntu@24.04:amd64:
-  ubuntu@24.04:arm64:
+bases:
+  - build-on:
+    - name: "ubuntu"
+      channel: "22.04"
+      architectures: ["arm64"]
+    run-on:
+    - name: "ubuntu"
+      channel: "22.04"
+      architectures: ["arm64"]
+  - build-on:
+    - name: "ubuntu"
+      channel: "20.04"
+      architectures: ["arm64"]
+    run-on:
+    - name: "ubuntu"
+      channel: "20.04"
+      architectures: ["arm64"]
+  - build-on:
+    - name: "ubuntu"
+      channel: "22.04"
+      architectures: ["amd64"]
+    run-on:
+    - name: "ubuntu"
+      channel: "22.04"
+      architectures: ["amd64"]
+  - build-on:
+    - name: "ubuntu"
+      channel: "20.04"
+      architectures: ["amd64"]
+    run-on:
+    - name: "ubuntu"
+      channel: "20.04"
+      architectures: ["amd64"]
 
 parts:
   charm:
