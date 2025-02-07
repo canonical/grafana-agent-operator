@@ -16,8 +16,8 @@ def test_forward_alert_rules(mock_config_path, forwarding):
         "config": json.dumps(
             {
                 "subordinate": True,
-                "metrics_alert_rules": {"groups": "alert_foo"},
-                "log_alert_rules": {"groups": "alert_bar"},
+                "metrics_alert_rules": {"groups": [{"name": "foo", "rules": []}]},
+                "log_alert_rules": {"groups": [{"name": "bar", "rules": []}]},
                 "dashboards": [
                     "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAmCnsKICAidGl0bGUiOiAi"
                     "Zm9vIiwKICAiYmFyIiA6ICJiYXoiCn0KAACkcc0YFt15xAABPyd8KlLdH7bzfQEAAAAABFla"
@@ -59,4 +59,7 @@ def test_forward_alert_rules(mock_config_path, forwarding):
 
     # AND THEN the charm forwards the remote_write config to the prom relation IF forwarding
     prometheus_relation_out = output_state.get_relation(prometheus_relation.id)
-    assert bool(prometheus_relation_out.local_unit_data.get('alert_rules')) is forwarding
+    if forwarding:
+        assert prometheus_relation_out.local_app_data.get("alert_rules") != "{}"
+    else:
+        assert prometheus_relation_out.local_app_data.get("alert_rules") == "{}"
