@@ -1695,7 +1695,7 @@ class LokiPushApiConsumer(ConsumerBase):
             if not isinstance(refresh_event, list):
                 refresh_event = [refresh_event]
             for ev in refresh_event:
-                self.framework.observe(ev, self._push_alerts_to_all_relation_databags)
+                self.framework.observe(ev, self._on_lifecycle_event)
 
     def _on_lifecycle_event(self, _: HookEvent):
         """Update require relation data on charm upgrades and other lifecycle events.

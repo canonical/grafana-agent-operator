@@ -1,0 +1,489 @@
+groups:
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostUseful_alerts
+  rules:
+  - alert: HostSystemdFailedScopes
+    annotations:
+      description: "Host has {{ $value }} systemd scopes in failed state.\n  VALUE\
+        \ = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Host has {{ $value }} systemd scopes in failed state (instance {{ $labels.instance
+        }})
+    expr: sum(node_systemd_unit_state{name=~".*.scope", state=~"failed"}) by (instance)
+      >= 50
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: critical
+  - alert: HostLoggedInUsers
+    annotations:
+      description: "Host has {{ $value }} users logged-in.\n  VALUE = {{ $value }}\n\
+        \  LABELS = {{ $labels }}"
+      summary: Host has {{ $value }} users logged-in (instance {{ $labels.instance
+        }})
+    expr: sum(node_logind_sessions{class="user"}) by (instance) > 25
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_hwmon_alerts
+  rules:
+  - alert: HwmonTempAlarm
+    annotations:
+      description: "Chip {{ $labels.chip }} is throwing a temperature alarm on {{\
+        \ $labels.instance }}\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Chip {{ $labels.chip }} is throwing a temperature alarm on {{ $labels.instance
+        }}
+    expr: node_hwmon_temp_alarm != 0
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostMemory_alerts
+  rules:
+  - expr: "100 * (1 - (\n  (\n    node_memory_MemFree_bytes\n    + node_memory_Cached_bytes\n\
+      \    + node_memory_Buffers_bytes\n    + node_memory_SReclaimable_bytes\n  )\
+      \ / node_memory_MemTotal_bytes\n))\n"
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+    record: node_memory_MemUsed_percentage
+  - expr: "100 * (1 - (\n  (\n    node_memory_SwapFree_bytes\n    + node_memory_SwapCached_bytes\n\
+      \  ) / node_memory_SwapTotal_bytes\n))\n"
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+    record: node_memory_SwapUsed_percentage
+  - alert: HostMemoryFillsUp
+    annotations:
+      description: "Host can potentially reach {{ $value | printf \"%.0f\" }}% memory\
+        \ utilization and risk an OOM kill.\n  VALUE = {{ $value }}\n  LABELS = {{\
+        \ $labels }}\nThe 5-minute-ahead prediction is made as a linear regression\
+        \ from the last 30 minutes of data."
+      summary: '[Prediction] Host memory usage will increase to {{ $value | printf
+        "%.0f" }}% in the near future (instance {{ $labels.instance }})'
+    expr: 'predict_linear(node_memory_MemUsed_percentage[30m], 5*60) >= 90
+
+      and
+
+      avg_over_time(node_memory_MemUsed_percentage[2m]) < 90
+
+      '
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+  - alert: HostMemoryFull
+    annotations:
+      description: "Host memory usage reached {{ $value | printf \"%.0f\" }}%\n  VALUE\
+        \ = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Host memory usage reached {{ $value | printf "%.0f" }}% load (instance
+        {{ $labels.instance }})
+    expr: "100 * avg_over_time(node_memory_MemAvailable_bytes[1m]) /\n  (\n    avg_over_time(node_memory_MemTotal_bytes[1m])\n\
+      \    - avg_over_time(node_memory_Hugetlb_bytes[1m])\n  ) < 10\n"
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: critical
+  - alert: HostSwapFull
+    annotations:
+      description: "Host memory and swap usage reached 90% and 50% load\n  VALUE =\
+        \ {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Host memory and swap usage reached 90% and 50% load (instance {{ $labels.instance
+        }})
+    expr: 'avg_over_time(node_memory_MemUsed_percentage[1m]) > 90
+
+      and
+
+      avg_over_time(node_memory_SwapUsed_percentage[1m]) > 50
+
+      '
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: critical
+  - alert: HostMemoryUnderMemoryPressure
+    annotations:
+      description: "The node is under heavy memory pressure. High rate of major page\
+        \ faults.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Host memory under memory pressure (instance {{ $labels.instance }})
+    expr: rate(node_vmstat_pgmajfault[1m]) > 1000
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_mdadm_alerts
+  rules:
+  - alert: RaidDisksFailed
+    annotations:
+      description: "Disks failed on raid device {{ $labels.device }}.\n  VALUE = {{\
+        \ $value }}\n  LABELS = {{ $labels }}"
+      summary: '{{ $value }} disks failed on device {{ $labels.device }}.(instance
+        {{ $labels.instance }})'
+    expr: node_md_disks{state="failed"} > 0
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: critical
+  - alert: RaidDisksSpare
+    annotations:
+      description: "Disks marked as spare on raid device {{ $labels.device }}.\n \
+        \ VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: '{{ $value }} disks marked as spare on device {{ $labels.device }}.(instance
+        {{ $labels.instance }})'
+    expr: node_md_disks{state="spare"} > 0
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+  - alert: RaidDeviceInactive
+    annotations:
+      description: RAID device {{ $labels.device }} in inactive state. VALUE = {{
+        $value }} LABELS = {{ $labels }}
+      summary: RAID device {{ $labels.device }} in inactive state.(instance {{ $labels.instance
+        }})
+    expr: node_md_state{state="inactive"} > 0
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: critical
+  - alert: RaidDeviceRecovering
+    annotations:
+      description: RAID device {{ $labels.device }} in recovering state. VALUE = {{
+        $value }} LABELS = {{ $labels }}
+      summary: RAID device {{ $labels.device }} in recovering state.(instance {{ $labels.instance
+        }})
+    expr: node_md_state{state="recovering"} > 0
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostReboot_alerts
+  rules:
+  - alert: HostReboot
+    annotations:
+      description: "Host machine rebooted recently.\n  VALUE = {{ $value }}\n  LABELS\
+        \ = {{ $labels }}"
+      summary: Host machine rebooted recently (instance {{ $labels.instance }})
+    expr: changes(node_boot_time_seconds[5m]) > 0 and node_boot_time_seconds != (node_boot_time_seconds
+      offset 1m)
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostDisk_alerts
+  rules:
+  - expr: "100 * (1 - (\n  node_filesystem_free_bytes / node_filesystem_size_bytes)\n\
+      )\n"
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+    record: used_disk_space
+  - alert: HostDiskSpaceFillsUp
+    annotations:
+      description: "Host filesystem '{{ $labels.mountpoint }}' usage can potentially\
+        \ reach {{ $value | printf \"%.0f\" }}% of the total space.\n  VALUE = {{\
+        \ $value }}\n  LABELS = {{ $labels }}\nThe 6-hour-ahead prediction is made\
+        \ as a linear regression from the last 60 minutes of data."
+      summary: '[Prediction] Host filesystem ''{{ $labels.mountpoint }}'' is using
+        {{ $value | printf "%.0f" }}% of the total space (instance {{ $labels.instance
+        }})'
+    expr: predict_linear(used_disk_space{mountpoint=~"/"}[6h], 6*60*60) > 90
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+  - alert: HostDiskSpace
+    annotations:
+      description: "Host filesystem '{{ $labels.mountpoint }}' is using {{ $value\
+        \ | printf \"%.0f\" }}% of the total space.\n  VALUE = {{ $value }}\n  LABELS\
+        \ = {{ $labels }}"
+      summary: Host filesystem '{{ $labels.mountpoint }}' is using {{ $value | printf
+        "%.0f" }}% of the total space (instance {{ $labels.instance }})
+    expr: used_disk_space{fstype!~"fuse\\.lxcfs|fuse\\.snapfuse", mountpoint!~"/run.*|/proc|/dev"}
+      > 90
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: critical
+  - alert: HostXFSError
+    annotations:
+      description: "XFS error found for device '{{ $labels.device }}'.\n  VALUE =\
+        \ {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: XFS error found for device '{{ $labels.device }}' (instance {{ $labels.instance
+        }})
+    expr: node_filesystem_device_error{fstype="xfs"} > 0
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: critical
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostPressure_alerts
+  rules:
+  - alert: HostHighCpuWaitingTime
+    annotations:
+      description: The instantanoues time that the processes spent on waiting for
+        CPU resource is too high. This might indicates that the server is under high
+        CPU pressure.\n  VALUE = {{ $value | printf "%.2f" }}\n  LABELS = {{ $labels
+        }}
+      summary: Host processes spent too much time waiting for CPU resources (instance
+        {{ $labels.instance }})
+    expr: irate(node_pressure_cpu_waiting_seconds_total[5m]) > 0.9
+    for: 5m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+  - alert: HostHighIOWaitingTime
+    annotations:
+      description: The instantanoues time that the processes spent on waiting for
+        I/O is too high. This might indicates that the server is under high I/O pressure.\n  VALUE
+        = {{ $value | printf "%.2f" }}\n  LABELS = {{ $labels }}
+      summary: Host processes spent too much time waiting due to I/O congestion (instance
+        {{ $labels.instance }})
+    expr: irate(node_pressure_io_waiting_seconds_total[5m]) > 0.5
+    for: 5m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+  - alert: HostHighMemoryWaitingTime
+    annotations:
+      description: The instantanoues time that the processes spent on waiting for
+        memory is too high. This might indicates that the server is under high memory
+        pressure.\n  VALUE = {{ $value | printf "%.2f" }}\n  LABELS = {{ $labels }}
+      summary: Host processes spent too much time waiting for memory (instance {{
+        $labels.instance }})
+    expr: irate(node_pressure_memory_waiting_seconds_total[5m]) > 0.5
+    for: 5m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostArpCache_alerts
+  rules:
+  - alert: HostArpCache
+    annotations:
+      description: "Host arp cache reached {{ $value | printf \"%.0f\" }}% limit.\n\
+        \  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Host arp cache reached {{ $value | printf "%.0f" }}% limit (instance
+        {{ $labels.instance }})
+    expr: 100 * node_arp_entries / node_sysctl_net_ipv4_neigh_default_gc_thresh3 >=
+      80
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: critical
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostCpu_alerts
+  rules:
+  - alert: HostCpuHighIowait
+    annotations:
+      description: "CPU iowait > 10%. A high iowait means that you are disk or network\
+        \ bound.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Host CPU high iowait (instance {{ $labels.instance }})
+    expr: avg by (instance) (rate(node_cpu_seconds_total{mode="iowait"}[5m])) * 100
+      > 10
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostProcesses_alerts
+  rules:
+  - alert: TooManyProcesses
+    annotations:
+      description: There are too many processes on the host machine. The current process
+        count is 80% or more of the  max.\n  VALUE = {{ $value | printf "%.2f" }}\n  LABELS
+        = {{ $labels }}
+      summary: Too many processes on the host machine (instance {{ $labels.instance
+        }})
+    expr: node_processes_pids / node_processes_max_processes * 100 > 80
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: info
+  - alert: ProcessesIncresingWarning
+    annotations:
+      description: The number of processes seem to be growing for the last 5 minutes.\n  VALUE
+        = {{ $value | printf "%.2f"}}\n  LABELS = {{ $labels }}
+      summary: Process count is kept increasing (instance {{ $labels.instance }})
+    expr: deriv(node_processes_pids[1m]) > 0
+    for: 5m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: info
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostNetwork_alerts
+  rules:
+  - alert: HostInterfaceMTUSize
+    annotations:
+      description: "Interface '{{ $labels.device }}' MTU size changed to {{ $value\
+        \ }} on host {{ $labels.instance }}.\n  VALUE = {{ $value }}\n  LABELS = {{\
+        \ $labels }}"
+      summary: Interface '{{ $labels.device }}' MTU size changed (instance {{ $labels.instance
+        }})
+    expr: last_over_time(node_network_mtu_bytes[30m]) and changes(node_network_mtu_bytes[30m])
+      > 0
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+  - alert: HostInterfaceSpeed
+    annotations:
+      description: "Interface '{{ $labels.device }}' speed changed to {{ $value }}B/s\
+        \ on host {{ $labels.instance }}.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels\
+        \ }}"
+      summary: Interface '{{ $labels.device }}' speed changed (instance {{ $labels.instance
+        }})
+    expr: last_over_time(node_network_speed_bytes[30m]) and changes(node_network_speed_bytes[30m])
+      > 0
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+  - alert: HostNetworkReceiveErrors
+    annotations:
+      description: "Interface '{{ $labels.device }}' has encountered {{ $value | printf\
+        \ \"%.4f\" }}% receive errors in the last two minutes on host {{ $labels.instance\
+        \ }}.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Interface '{{ $labels.device }}' network receive to many errors (instance
+        {{ $labels.instance }})
+    expr: rate(node_network_receive_errs_total[2m]) / rate(node_network_receive_packets_total[2m])
+      > 0.01
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+  - alert: HostNetworkTransmitErrors
+    annotations:
+      description: "Interface '{{ $labels.device }}' has encountered {{ $value | printf\
+        \ \"%.4f\" }}% transmit errors in the last two minutes on host {{ $labels.instance\
+        \ }}.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Interface '{{ $labels.device }}' network transmit to many errors (instance
+        {{ $labels.instance }})
+    expr: rate(node_network_transmit_errs_total[2m]) / rate(node_network_transmit_packets_total[2m])
+      > 0.01
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+  - alert: HostNetworkBondDegraded
+    annotations:
+      description: "Host bond `{{ $labels.master }}` network is degraded.\n  VALUE\
+        \ = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Host bond network is degraded (instance {{ $labels.instance }})
+    expr: (node_bonding_active - node_bonding_slaves) != 0
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostConnctrack_alerts
+  rules:
+  - alert: HostConntrackLimit
+    annotations:
+      description: "Host conntrack reached {{ $value | printf \"%.0f\" }}% usage.\n\
+        \  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      summary: Host conntrack reached {{ $value | printf "%.0f" }}% (instance {{ $labels.instance
+        }})
+    expr: 100 * (node_nf_conntrack_entries / node_nf_conntrack_entries_limit) > 80
+    for: 2m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
+- name: TestUpdateStatus_0f77a9cc_grafana_agent_HostOomkill_alerts
+  rules:
+  - alert: HostOomKillDetected
+    annotations:
+      description: "OOM kill detected\n  VALUE = {{ $value }}\n  LABELS = {{ $labels\
+        \ }}"
+      summary: Host OOM kill detected (instance {{ $labels.instance }})
+    expr: increase(node_vmstat_oom_kill[1h]) > 0
+    for: 0m
+    labels:
+      juju_application: grafana-agent
+      juju_charm: grafana-agent
+      juju_model: TestUpdateStatus
+      juju_model_uuid: 0f77a9cc-83b0-4c40-978f-90c68e46bb2f
+      severity: warning
