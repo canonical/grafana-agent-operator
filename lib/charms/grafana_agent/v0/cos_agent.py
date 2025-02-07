@@ -254,7 +254,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 18
+LIBPATCH = 19
 
 PYDEPS = ["cosl >= 0.0.50", "pydantic"]
 
