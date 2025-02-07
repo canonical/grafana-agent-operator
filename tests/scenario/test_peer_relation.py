@@ -245,6 +245,97 @@ def test_cosagent_to_peer_data_flow_relation(leader):
 
 
 @pytest.mark.parametrize("leader", (True, False))
+def test_cosagent_provider_departs(leader):
+    raw_dashboard_1 = {"title": "title", "foo": "bar"}
+    data_1 = CosAgentProviderUnitData(
+        metrics_alert_rules={},
+        log_alert_rules={},
+        metrics_scrape_jobs=[],
+        log_slots=[],
+        dashboards=[encode_as_dashboard(raw_dashboard_1)],
+    )
+
+    cos_agent_1 = SubordinateRelation(
+        endpoint="cos-agent",
+        interface="cos_agent",
+        remote_app_name="primary",
+        remote_unit_data={data_1.KEY: data_1.json()},
+    )
+
+    raw_dashboard_2 = {"title": "other_title", "foo": "other bar (would that be a pub?)"}
+    data_2 = CosAgentProviderUnitData(
+        metrics_alert_rules={},
+        log_alert_rules={},
+        metrics_scrape_jobs=[],
+        log_slots=[],
+        dashboards=[encode_as_dashboard(raw_dashboard_2)],
+    )
+
+    cos_agent_2 = SubordinateRelation(
+        endpoint="cos-agent",
+        interface="cos_agent",
+        remote_app_name="other_primary",
+        remote_unit_data={data_2.KEY: data_2.json()},
+    )
+
+    peer_relation = PeerRelation(
+        endpoint="peers",
+        interface="grafana_agent_replica",
+        peers_data={
+            1: {
+                f"{CosAgentPeersUnitData.KEY}-primary/0": CosAgentPeersUnitData(
+                    unit_name="primary/0",
+                    relation_id="42",
+                    relation_name="foobar-relation",
+                    dashboards=[encode_as_dashboard(raw_dashboard_1)],
+                ).json()
+            },
+            2: {
+                f"{CosAgentPeersUnitData.KEY}-other_primary/0": CosAgentPeersUnitData(
+                    unit_name="other_primary/0",
+                    relation_id="43",
+                    relation_name="foobar-relation",
+                    dashboards=[encode_as_dashboard(raw_dashboard_2)],
+                ).json()
+            },
+        },
+    )
+
+    state = State(
+        leader=leader,
+        relations=[
+            peer_relation,
+            cos_agent_1,
+            cos_agent_2,
+        ],
+    )
+
+    ctx = Context(
+        charm_type=MyRequirerCharm,
+        meta=MyRequirerCharm.META,
+    )
+
+    # WHEN a cos-agent provider departs
+    with ctx(ctx.on.relation_departed(relation=cos_agent_2, remote_unit=0), state) as mgr:
+        out = mgr.run()
+        # THEN we only have the 1st dashboard
+        dashboards = mgr.charm.cosagent.dashboards
+        assert len(dashboards) == 1
+        assert dashboards[0]["content"] == raw_dashboard_1
+        # AND peer data contains the 1st dashboard only
+        peer_relation_out: PeerRelation = next(
+            filter(lambda r: r.endpoint == "peers", out.relations)
+        )
+        peer_data_local = peer_relation_out.local_unit_data[
+            f"{CosAgentPeersUnitData.KEY}-other_primary/0"
+        ]
+        assert json.loads(peer_data_local)["dashboards"] == []
+
+        peer_data_peer = peer_relation_out.peers_data[1][f"{CosAgentPeersUnitData.KEY}-primary/0"]
+        assert json.loads(peer_data_peer)["dashboards"] == [encode_as_dashboard(raw_dashboard_1)]
+
+
+@pytest.mark.parametrize("leader", (True, False))
 def test_cosagent_to_peer_data_app_vs_unit(leader):
     # this test verifies that if multiple units (belonging to different apps) all publish their own
     # CosAgentProviderUnitData via `cos-agent`, then the `peers` peer relation will be populated

@@ -9,6 +9,7 @@ from charms.grafana_agent.v0.cos_agent import (
     COSAgentProvider,
     COSAgentRequirer,
 )
+from cosl.rules import generic_alert_groups
 from ops.charm import CharmBase
 from ops.framework import Framework
 from ops.testing import Context, PeerRelation, State, SubordinateRelation
@@ -119,6 +120,25 @@ def requirer_ctx(requirer_charm):
     return Context(charm_type=requirer_charm, meta=requirer_charm.META)
 
 
+def test_cos_agent_injects_generic_alerts(provider_ctx):
+    # GIVEN a cos-agent subordinate relation
+    cos_agent = SubordinateRelation("cos-agent")
+
+    # WHEN the relation_changed event fires
+    state_out = provider_ctx.run(
+        provider_ctx.on.relation_changed(relation=cos_agent, remote_unit=1),
+        State(relations=[cos_agent]),
+    )
+
+    config = json.loads(
+        state_out.get_relation(cos_agent.id).local_unit_data[CosAgentPeersUnitData.KEY]
+    )
+    # THEN the metrics_alert_rules groups should only contain the generic alert groups
+    assert (
+        config["metrics_alert_rules"]["groups"] == generic_alert_groups.application_rules["groups"]
+    )
+
+
 def test_cos_agent_changed_no_remote_data(provider_ctx):
     cos_agent = SubordinateRelation("cos-agent")
 
@@ -130,7 +150,15 @@ def test_cos_agent_changed_no_remote_data(provider_ctx):
     config = json.loads(
         state_out.get_relation(cos_agent.id).local_unit_data[CosAgentPeersUnitData.KEY]
     )
-    assert config["metrics_alert_rules"] == {}
+
+    # the cos_agent lib injects generic (HostHealth) alert rules and should be filtered for the test
+    config["metrics_alert_rules"]["groups"] = [
+        group
+        for group in config["metrics_alert_rules"]["groups"]
+        if "_HostHealth_" not in group["name"]
+    ]
+
+    assert config["metrics_alert_rules"] == {"groups": []}
     assert config["log_alert_rules"] == {}
     assert len(config["dashboards"]) == 1
     assert len(config["metrics_scrape_jobs"]) == 1
