@@ -758,6 +758,13 @@ class COSAgentProvider(Object):
                 # because there is currently no other way to communicate the dashboard path separately.
                 # https://github.com/canonical/grafana-k8s-operator/pull/363
                 dashboard["uid"] = DashboardPath40UID.generate(self._charm.meta.name, rel_path)
+
+                # Add tags
+                tags: List[str] = dashboard.get("tags", [])
+                if not any(tag.startswith("charm: ") for tag in tags):
+                    tags.append(f"charm: {self._charm.meta.name}")
+                dashboard["tags"] = tags
+
                 dashboards.append(LZMABase64.compress(json.dumps(dashboard)))
         return dashboards
 
