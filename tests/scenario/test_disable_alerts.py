@@ -57,14 +57,10 @@ def test_forward_alert_rules(mock_config_path, forwarding):
         assert mgr.charm._cos.metrics_alerts
 
     # AND THEN the charm forwards the alerts IF forwarding
-    prometheus_relation_out = output_state.get_relation(prometheus_relation.id)
+    prom_relation_out = output_state.get_relation(prometheus_relation.id)
     loki_relation_out = output_state.get_relation(loki_relation.id)
-    if forwarding:
-        assert prometheus_relation_out.local_app_data.get("alert_rules") != "{}"
-        assert loki_relation_out.local_app_data.get("alert_rules") != "{}"
-    else:
-        assert prometheus_relation_out.local_app_data.get("alert_rules") == "{}"
-        assert loki_relation_out.local_app_data.get("alert_rules") == "{}"
+    assert prom_relation_out.local_app_data.get("alert_rules") != "{}" if forwarding else "{}"
+    assert loki_relation_out.local_app_data.get("alert_rules") != "{}" if forwarding else "{}"
 
 
 def test_forward_alert_rules_on_and_off(mock_config_path):
