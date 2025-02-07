@@ -165,7 +165,11 @@ class GrafanaAgentCharm(CharmBase):
         )
 
         self._loki_consumer = LokiPushApiConsumer(
-            self, relation_name="logging-consumer", alert_rules_path=self.loki_rules_paths.dest
+            self,
+            relation_name="logging-consumer",
+            alert_rules_path=self.loki_rules_paths.dest,
+            forward_alert_rules=self._forward_alert_rules,
+            refresh_event=[self.on.config_changed],
         )
 
         self._grafana_dashboards_provider = GrafanaDashboardProvider(
