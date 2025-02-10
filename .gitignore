@@ -18,3 +18,8 @@ crash.log
 .terraform/
 terraform.tfvars
 terraform.tfvars.json
+
+# Created by tox -e unit
+/grafana_dashboards/
+/loki_alert_rules/
+/prometheus_alert_rules/
