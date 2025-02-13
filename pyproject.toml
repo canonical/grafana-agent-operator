@@ -1,5 +1,46 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+[project]
+name = "grafana-agent"
+version = "0.0"
+requires-python = "~=3.8"
+
+dependencies = [
+  "cosl >= 0.0.50",
+  "ops > 2.5.0",
+  "pydantic < 2",
+  "requests",
+  "cryptography", # Pin prevents an error in the wheels due to crypto package moving to openssl 3.2.1
+  "jsonschema", # Pin prevents the machine charm error "ModuleNotFoundError: No module named 'rpds.rpds'"
+  # lib/charms/tempo_k8s/v1/charm_tracing
+  "opentelemetry-exporter-otlp-proto-http>=1.21.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  # Linting
+  "ruff",
+  "codespell",
+  # Static
+  "pyright",
+  # Unit
+  "pytest",
+  "coverage[toml]",
+  "responses",
+  "cosl",
+  "pydantic",
+  "ops[testing]",
+  "fs",
+  # Integration
+  "aiohttp",
+  "asyncstdlib",
+  "juju ~= 3.3.0", # libjuju needs to track the juju version
+  "websockets<14.0", # https://github.com/juju/python-libjuju/issues/1184 (fixed in juju 3.5.2.1)
+  "pytest", # trying to remove the pinning TODO: remove this comment
+  "prometheus-api-client",  # TODO: ideally remove this
+  "pytest-operator",
+  "sh",
+]
 
 # Testing tools configuration
 [tool.coverage.run]
@@ -12,7 +53,6 @@ show_missing = true
 [tool.ruff]
 line-length = 99
 exclude = ["__pycache__", "*.egg_info"]
-target-version = "py38"
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "C", "N", "R", "D", "I001"]
@@ -36,6 +76,9 @@ reportIncompatibleMethodOverride = false
 reportImportCycles = false
 
 [tool.pytest.ini_options]
-minversion = "6.0"
-log_cli_level = "INFO"
 asyncio_mode = "auto"
+addopts = "--tb=native --verbose --capture=no --log-cli-level=INFO"
+
+[tool.codespell]
+skip = ".git,.tox,build,venv*"
+ignore-words-list = "assertIn"

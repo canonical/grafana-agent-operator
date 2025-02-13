@@ -37,7 +37,7 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
     # first one. Since primary is jammy, we know we need to deploy the jammy grafana agent charm,
     # otherwise we'd get an error such as:
     #   ImportError: libssl.so.1.1: cannot open shared object file: No such file or directory
-    jammy_charm_path = grafana_agent_charm.parent / "grafana-agent_ubuntu-22.04-amd64.charm"
+    jammy_charm_path = grafana_agent_charm.parent / "grafana-agent_ubuntu@22.04-amd64.charm"
 
     # Subordinate
     await ops_test.model.deploy(
