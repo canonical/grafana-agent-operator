@@ -82,7 +82,7 @@ def _install_snap(
         snap.ensure(state=snap_lib.SnapState.Present, revision=revision, classic=classic)
 
     if config:
-        snap.set(config)
+        snap.set(config)  # type: ignore
 
     snap.hold()
 

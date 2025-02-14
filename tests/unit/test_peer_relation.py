@@ -46,6 +46,7 @@ def test_fetch_data_from_relation():
     assert len(data) == 1
 
     data_peer_1 = data[0]
+    assert data_peer_1.dashboards
     assert len(data_peer_1.dashboards) == 1
     dash_out_raw = data_peer_1.dashboards[0]
     assert json.loads(LZMABase64.decompress(dash_out_raw)) == py_dash
@@ -196,6 +197,8 @@ def test_cosagent_to_peer_data_flow_relation(leader):
                     relation_id="42",
                     relation_name="foobar-relation",
                     dashboards=[encode_as_dashboard(raw_dashboard_1)],
+                    metrics_alert_rules={},
+                    log_alert_rules={},
                 ).json()
             }
         },
@@ -232,7 +235,7 @@ def test_cosagent_to_peer_data_flow_relation(leader):
         assert other_dash["title"] == "other_title"
         assert other_dash["content"] == raw_dashboard_2
 
-    peer_relation_out: PeerRelation = next(filter(lambda r: r.endpoint == "peers", out.relations))
+    peer_relation_out: PeerRelation = next(filter(lambda r: r.endpoint == "peers", out.relations))  # type: ignore
     # the dashboard we just received via cos-agent is now in our local peer databag
     peer_data_local = peer_relation_out.local_unit_data[
         f"{CosAgentPeersUnitData.KEY}-other_primary/0"
@@ -288,6 +291,8 @@ def test_cosagent_provider_departs(leader):
                     relation_id="42",
                     relation_name="foobar-relation",
                     dashboards=[encode_as_dashboard(raw_dashboard_1)],
+                    metrics_alert_rules={},
+                    log_alert_rules={},
                 ).json()
             },
             2: {
@@ -296,6 +301,8 @@ def test_cosagent_provider_departs(leader):
                     relation_id="43",
                     relation_name="foobar-relation",
                     dashboards=[encode_as_dashboard(raw_dashboard_2)],
+                    metrics_alert_rules={},
+                    log_alert_rules={},
                 ).json()
             },
         },
@@ -324,7 +331,7 @@ def test_cosagent_provider_departs(leader):
         assert dashboards[0]["content"] == raw_dashboard_1
         # AND peer data contains the 1st dashboard only
         peer_relation_out: PeerRelation = next(
-            filter(lambda r: r.endpoint == "peers", out.relations)
+            filter(lambda r: r.endpoint == "peers", out.relations)  # type: ignore
         )
         peer_data_local = peer_relation_out.local_unit_data[
             f"{CosAgentPeersUnitData.KEY}-other_primary/0"
@@ -430,7 +437,7 @@ def test_cosagent_to_peer_data_app_vs_unit(leader):
         assert dash_1["title"] == "title"
         assert dash_1["content"] == raw_dashboard_1
 
-    peer_relation_out: PeerRelation = next(filter(lambda r: r.endpoint == "peers", out.relations))
+    peer_relation_out: PeerRelation = next(filter(lambda r: r.endpoint == "peers", out.relations))  # type: ignore
     my_databag_peer_data = peer_relation_out.local_unit_data[
         f"{CosAgentPeersUnitData.KEY}-other_primary/0"
     ]

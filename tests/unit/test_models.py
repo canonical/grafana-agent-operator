@@ -15,7 +15,7 @@ class Foo(pydantic.BaseModel):
 def test_dashboard_validation():
     raw_dash = {"totl": "foo", "bar": "baz"}
     with pytest.raises(pydantic.ValidationError):
-        Foo(dash=[raw_dash])
+        Foo(dash=[raw_dash])  # type: ignore
 
 
 def test_dashboard_serialization():

@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 import yaml
-from charms.grafana_agent.v0.cos_agent import ReceiverProtocol
+from charms.grafana_agent.v0.cos_agent import ProtocolType, ReceiverProtocol, TransportProtocolType
 from charms.tempo_coordinator_k8s.v0.tracing import ReceiverProtocol as TracingReceiverProtocol
 from ops.testing import Context, Relation, State, SubordinateRelation
 
@@ -67,18 +67,22 @@ def test_tracing_sampling_config_is_present(
             dashboards=[],
             subordinate=True,
             tracing_protocols=["otlp_http", "otlp_grpc"],
-        ).dump(),
+        ).dump(),  # type: ignore
     )
     tracing = Relation(
         "tracing",
         remote_app_data=TracingProviderAppData(
-            receivers=[
-                Receiver(protocol={"name": "otlp_grpc", "type": "grpc"}, url="http:foo.com:1111"),
+            receivers=[  # type: ignore
                 Receiver(
-                    protocol={"name": "otlp_http", "type": "http"}, url="http://localhost:1112"
+                    protocol=ProtocolType(name="otlp_grpc", type=TransportProtocolType("grpc")),
+                    url="http:foo.com:1111",
+                ),
+                Receiver(
+                    protocol=ProtocolType(name="otlp_http", type=TransportProtocolType("http")),
+                    url="http://localhost:1112",
                 ),
             ]
-        ).dump(),
+        ).dump(),  # type: ignore
     )
 
     state = State(leader=True, relations=[tracing, tracing_provider], config=sampling_config)

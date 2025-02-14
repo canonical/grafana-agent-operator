@@ -3,7 +3,6 @@
 
 import logging
 from types import SimpleNamespace
-from typing import List
 
 import pytest
 from juju.errors import JujuError
@@ -15,7 +14,7 @@ principal = SimpleNamespace(charm="ubuntu", name="principal")
 logger = logging.getLogger(__name__)
 
 
-async def ssh(ops_test, app_name: str, command: str) -> List[str]:
+async def ssh(ops_test, app_name: str, command: str):
     """Run a command in all units of the given apps and return all the outputs."""
     unit = ops_test.model.applications[app_name].units[0]
     try:
@@ -25,11 +24,13 @@ async def ssh(ops_test, app_name: str, command: str) -> List[str]:
 
 
 async def test_setup_env(ops_test: OpsTest):
+    assert ops_test.model
     await ops_test.model.set_config({"logging-config": "<root>=WARNING; unit=DEBUG"})
 
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
+    assert ops_test.model
     # Principal
     await ops_test.model.deploy(principal.charm, application_name=principal.name, series="jammy")
 
@@ -80,7 +81,10 @@ async def test_switch_to_strict(ops_test: OpsTest):
     # $ juju ssh agent/0 snap services grafana-agent
     # Service                      Startup  Current  Notes
     # grafana-agent.grafana-agent  enabled  active   -
-    await ops_test.model.applications[agent.name].set_config({"classic_snap": "false"})
+    assert ops_test.model
+    agent_app = ops_test.model.applications[agent.name]
+    assert agent_app
+    await agent_app.set_config({"classic_snap": "false"})
     await ops_test.model.wait_for_idle(
         apps=[principal.name, agent.name], status="active", timeout=1500
     )
@@ -96,7 +100,10 @@ async def test_switch_to_classic(ops_test: OpsTest):
     # $ juju ssh agent/0 snap services grafana-agent
     # Service                      Startup  Current  Notes
     # grafana-agent.grafana-agent  enabled  active   -
-    await ops_test.model.applications[agent.name].set_config({"classic_snap": "true"})
+    assert ops_test.model
+    agent_app = ops_test.model.applications[agent.name]
+    assert agent_app
+    await agent_app.set_config({"classic_snap": "true"})
     await ops_test.model.wait_for_idle(apps=[principal.name, agent.name], status="active")
     out = await ssh(ops_test, agent.name, "snap info --verbose grafana-agent | grep confinement")
     assert out.split()[1] == "classic"

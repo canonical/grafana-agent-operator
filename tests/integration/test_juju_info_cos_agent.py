@@ -43,11 +43,13 @@ async def ssh_units(ops_test, app_name: str, command: str) -> List[str]:
 
 
 async def test_setup_env(ops_test: OpsTest):
+    assert ops_test.model
     await ops_test.model.set_config({"logging-config": "<root>=WARNING; unit=DEBUG"})
 
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
+    assert ops_test.model
     # Principal
     await ops_test.model.deploy(
         principal.charm, application_name=principal.name, num_units=2, series="jammy"
@@ -83,6 +85,7 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
 
 @pytest.mark.abort_on_fail
 async def test_service(ops_test: OpsTest):
+    assert ops_test.model
     # WHEN the charm is related to a principal over `juju-info`
     await ops_test.model.integrate("agent:juju-info", principal.name)
     await ops_test.model.integrate("hwo:general-info", principal.name)
