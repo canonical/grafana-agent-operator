@@ -23,6 +23,7 @@ class TestFstabParsing(unittest.TestCase):
 
         fstab = SnapFstab(fstab_file)
         entry = fstab.entry("charmed-kafka", "logs")
+        assert entry
         self.assertEqual(entry.owner, "charmed-kafka")
         self.assertEqual(entry.endpoint_source, "common/log")
         self.assertEqual(entry.target, "/snap/grafana-agent/7/shared-logs/log")
@@ -39,6 +40,7 @@ class TestFstabParsing(unittest.TestCase):
 
         fstab = SnapFstab(fstab_file)
         entry = fstab.entry("charmed-kafka", "logs")
+        assert entry
         self.assertEqual(entry.owner, "charmed-kafka")
         self.assertEqual(entry.endpoint_source, "common/log")
         self.assertEqual(entry.target, "/snap/grafana-agent/7/shared-logs/log")
@@ -55,18 +57,21 @@ class TestFstabParsing(unittest.TestCase):
 
         fstab = SnapFstab(fstab_file)
         entry = fstab.entry("charmed-kafka", "logs")
+        assert entry
         self.assertEqual(entry.owner, "charmed-kafka")
         self.assertEqual(entry.endpoint_source, "common/log")
         self.assertEqual(entry.target, "/snap/grafana-agent/7/shared-logs/log")
         self.assertEqual(entry.relative_target, "/log")
 
         entry = fstab.entry("charmed-kafka", "aei")
+        assert entry
         self.assertEqual(entry.owner, "charmed-kafka")
         self.assertEqual(entry.endpoint_source, "common/aei")
         self.assertEqual(entry.target, "/snap/grafana-agent/7/shared-logs/aei")
         self.assertEqual(entry.relative_target, "/aei")
 
         entry = fstab.entry("other-snap", "shared")
+        assert entry
         self.assertEqual(entry.owner, "other-snap")
         self.assertEqual(entry.endpoint_source, "logs/shared")
         self.assertEqual(entry.target, "/snap/grafana-agent/8/shared-logs/shared-aei")
@@ -83,6 +88,7 @@ class TestFstabParsing(unittest.TestCase):
 
         fstab = SnapFstab(fstab_file)
         entry = fstab.entry("charmed-kafka", "aei")
+        assert entry
         self.assertEqual(entry.owner, "charmed-kafka")
         self.assertEqual(entry.endpoint_source, "common/aei")
         self.assertEqual(entry.target, "/snap/grafana-agent/7/shared-logs/aei")
@@ -98,12 +104,14 @@ class TestFstabParsing(unittest.TestCase):
 
         fstab = SnapFstab(fstab_file)
         entry = fstab.entry("charmed-kafka", "logs")
+        assert entry
         self.assertEqual(entry.owner, "charmed-kafka")
         self.assertEqual(entry.endpoint_source, "common/log")
         self.assertEqual(entry.target, "/snap/grafana-agent/7/shared-logs/log")
         self.assertEqual(entry.relative_target, "/log")
 
         other_entry = fstab.entry("other-snap", "shared-logs")
+        assert other_entry
         self.assertEqual(other_entry.owner, "other-snap")
         self.assertEqual(other_entry.endpoint_source, "logs/shared")
         self.assertEqual(other_entry.target, "/snap/grafana-agent/7/shared-logs/shared")
@@ -119,11 +127,13 @@ class TestFstabParsing(unittest.TestCase):
 
         fstab = SnapFstab(fstab_file)
         entry = fstab.entry("charmed-kafka", "logs")
+        assert entry
         self.assertEqual(entry.endpoint_source, "common/log")
         self.assertEqual(entry.target, "/snap/grafana-agent/7/shared-logs/log")
         self.assertEqual(entry.relative_target, "/log")
 
         other_entry = fstab.entry("other-snap", "logs")
+        assert other_entry
         self.assertEqual(other_entry.owner, "other-snap")
         self.assertEqual(other_entry.endpoint_source, "common/log")
         self.assertEqual(other_entry.target, "/snap/grafana-agent/7/shared-logs/log-1")

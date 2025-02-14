@@ -2,8 +2,10 @@
 # See LICENSE file for licensing details.
 import functools
 import logging
+import os
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -52,5 +54,9 @@ def timed_memoizer(func):
 @timed_memoizer
 async def grafana_agent_charm(ops_test: OpsTest):
     """Grafana-agent charm used for integration testing."""
+    if charm_file := os.environ.get("CHARM_PATH"):
+        return Path(charm_file)
+
     charm = await ops_test.build_charm(".")
-    return charm
+    # Use the Jammy charm in integration tests
+    return Path("grafana-agent_ubuntu@22.04-amd64.charm").resolve() if charm else charm

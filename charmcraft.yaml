@@ -15,57 +15,32 @@ links:
   source: https://github.com/canonical/grafana-agent-operator
   issues: https://github.com/canonical/grafana-agent-operator/issues
 
-bases:
-  - build-on:
-    - name: "ubuntu"
-      channel: "22.04"
-      architectures: ["arm64"]
-    run-on:
-    - name: "ubuntu"
-      channel: "22.04"
-      architectures: ["arm64"]
-  - build-on:
-    - name: "ubuntu"
-      channel: "20.04"
-      architectures: ["arm64"]
-    run-on:
-    - name: "ubuntu"
-      channel: "20.04"
-      architectures: ["arm64"]
-  - build-on:
-    - name: "ubuntu"
-      channel: "22.04"
-      architectures: ["amd64"]
-    run-on:
-    - name: "ubuntu"
-      channel: "22.04"
-      architectures: ["amd64"]
-  - build-on:
-    - name: "ubuntu"
-      channel: "20.04"
-      architectures: ["amd64"]
-    run-on:
-    - name: "ubuntu"
-      channel: "20.04"
-      architectures: ["amd64"]
+platforms:
+  ubuntu@20.04:amd64:
+  ubuntu@20.04:arm64:
+  ubuntu@22.04:amd64:
+  ubuntu@22.04:arm64:
+  ubuntu@24.04:amd64:
+  ubuntu@24.04:arm64:
 
 parts:
   charm:
-    build-packages:
-    - git
-
-    # The following are needed for tls-certificates-interface
-    - build-essential
-    - python3-dev
-    - libffi-dev
-    - libssl-dev
-    - pkg-config
-    - rustc
-    - cargo
-    charm-binary-python-packages:
+    charm-binary-python-packages: 
       # Install PyYAML from binary and avoid building it from sources. This way, we can use PyYAML with C-optimized lib.
       # With the C-optimized lib, serialization in ops is 20x faster.
       - PyYAML
+      - cryptography
+      - jsonschema
+      - pydantic
+      - pydantic-core
+    build-packages:
+      - git
+    build-snaps: [astral-uv]
+    override-build: |
+      uv export --frozen --no-hashes --format=requirements-txt -o requirements.txt
+      git describe --always > version
+      craftctl default
+    charm-requirements: [requirements.txt]
   cos-tool:
     plugin: dump
     source: .
@@ -73,7 +48,9 @@ parts:
       - curl
     override-pull: |
       curl -L -O https://github.com/canonical/cos-tool/releases/latest/download/cos-tool-${CRAFT_ARCH_BUILD_FOR}
-      chmod 775 cos-tool-*
+    permissions:
+      - path: cos-tool-${CRAFT_ARCH_BUILD_FOR}
+        mode: "755"
 
 requires:
   certificates:

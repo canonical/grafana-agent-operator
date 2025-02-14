@@ -62,7 +62,7 @@ def test_snap_endpoints(placeholder_cfg_path, charm_config):
         ctx = Context(
             charm_type=charm.GrafanaAgentMachineCharm,
         )
-        ctx.run(state=state, event=cos_relation.changed_event)
+        ctx.run(state=state, event=cos_relation.changed_event)  # type: ignore
 
     assert written_path == placeholder_cfg_path
     written_config = yaml.safe_load(written_text)

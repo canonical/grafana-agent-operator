@@ -76,7 +76,7 @@ def provider_charm():
             self.gagent = COSAgentProvider(
                 self,
                 metrics_endpoints=[
-                    {"path": "/metrics", "port": "8080"},
+                    {"path": "/metrics", "port": 8080},
                 ],
                 metrics_rules_dir="./src/alert_rules/prometheus",
                 logs_rules_dir="./src/alert_rules/loki",
