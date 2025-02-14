@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 import pytest
 from cosl import LZMABase64
+from helpers import set_run_out
 from ops.testing import Context, PeerRelation, State, SubordinateRelation
 
 import charm
-from tests.scenario.helpers import set_run_out
 
 
 @pytest.fixture

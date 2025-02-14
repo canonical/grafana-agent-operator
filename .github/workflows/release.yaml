@@ -8,8 +8,7 @@ on:
 
 jobs:
   release:
-    uses: canonical/observability/.github/workflows/charm-release.yaml@v0
+    uses: canonical/observability/.github/workflows/charm-release.yaml@v1
     secrets: inherit
     with:
-      provider: lxd
-      build-for-arm: true
+      provider: machine
