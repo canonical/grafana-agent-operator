@@ -134,14 +134,10 @@ class GrafanaAgentCharm(CharmBase):
         charm_root = self.charm_dir.absolute()
         self._forward_alert_rules = cast(bool, self.config["forward_alert_rules"])
         self.loki_rules_paths = RulesMapping(
-            # TODO how to inject topology only for this charm's own rules?
-            # FIXED: this is already handled by reusing the *Rules classes
             src=charm_root.joinpath(*LOKI_RULES_SRC_PATH.split("/")),
             dest=charm_root.joinpath(*LOKI_RULES_DEST_PATH.split("/")),
         )
         self.metrics_rules_paths = RulesMapping(
-            # TODO how to inject topology only for this charm's own rules?
-            # FIXED: this is already handled by reusing the *Rules classes
             src=charm_root.joinpath(*METRICS_RULES_SRC_PATH.split("/")),
             dest=charm_root.joinpath(*METRICS_RULES_DEST_PATH.split("/")),
         )
