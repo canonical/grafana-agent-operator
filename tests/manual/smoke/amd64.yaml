@@ -1,0 +1,55 @@
+default-base: ubuntu@24.04/stable
+applications:
+  ga20:
+    charm: ./grafana-agent_ubuntu@20.04-amd64.charm
+    base: ubuntu@20.04/stable
+  ga22:
+    charm: ./grafana-agent_ubuntu@22.04-amd64.charm
+    base: ubuntu@22.04/stable
+  ga24:
+    charm: ./grafana-agent_ubuntu@24.04-amd64.charm
+    base: ubuntu@24.04/stable
+  ub20:
+    charm: ubuntu
+    channel: latest/stable
+    revision: 25
+    base: ubuntu@20.04/stable
+    num_units: 1
+    to:
+    - "1"
+    constraints: arch=amd64
+  ub22:
+    charm: ubuntu
+    channel: latest/stable
+    revision: 25
+    base: ubuntu@22.04/stable
+    num_units: 1
+    to:
+    - "2"
+    constraints: arch=amd64
+  ub24:
+    charm: ubuntu
+    channel: latest/stable
+    revision: 25
+    base: ubuntu@24.04/stable
+    num_units: 1
+    to:
+    - "3"
+    constraints: arch=amd64
+machines:
+  "1":
+    constraints: arch=amd64
+    base: ubuntu@20.04/stable
+  "2":
+    constraints: arch=amd64
+    base: ubuntu@22.04/stable
+  "3":
+    constraints: arch=amd64
+    base: ubuntu@24.04/stable
+relations:
+- - ga20:juju-info
+  - ub20:juju-info
+- - ga22:juju-info
+  - ub22:juju-info
+- - ga24:juju-info
+  - ub24:juju-info
