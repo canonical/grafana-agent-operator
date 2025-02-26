@@ -1,13 +1,13 @@
 default-base: ubuntu@24.04/stable
 applications:
   ga20:
-    charm: ./grafana-agent_ubuntu@20.04-amd64.charm
+    charm: ../../../grafana-agent_ubuntu@20.04-amd64.charm
     base: ubuntu@20.04/stable
   ga22:
-    charm: ./grafana-agent_ubuntu@22.04-amd64.charm
+    charm: ../../../grafana-agent_ubuntu@22.04-amd64.charm
     base: ubuntu@22.04/stable
   ga24:
-    charm: ./grafana-agent_ubuntu@24.04-amd64.charm
+    charm: ../../../grafana-agent_ubuntu@24.04-amd64.charm
     base: ubuntu@24.04/stable
   ub20:
     charm: ubuntu
