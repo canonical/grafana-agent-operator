@@ -29,7 +29,7 @@ parts:
       # Install PyYAML from binary and avoid building it from sources. This way, we can use PyYAML with C-optimized lib.
       # With the C-optimized lib, serialization in ops is 20x faster.
       - PyYAML
-      - cryptography
+      - cryptography==44.0.1
       - jsonschema
       - pydantic
       - pydantic-core
@@ -43,11 +43,8 @@ parts:
     charm-requirements: [requirements.txt]
   cos-tool:
     plugin: dump
-    source: .
-    build-packages:
-      - curl
-    override-pull: |
-      curl -L -O https://github.com/canonical/cos-tool/releases/latest/download/cos-tool-${CRAFT_ARCH_BUILD_FOR}
+    source: https://github.com/canonical/cos-tool/releases/latest/download/cos-tool-${CRAFT_ARCH_BUILD_FOR}
+    source-type: file
     permissions:
       - path: cos-tool-${CRAFT_ARCH_BUILD_FOR}
         mode: "755"
