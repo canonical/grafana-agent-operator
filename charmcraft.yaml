@@ -35,6 +35,13 @@ parts:
       - pydantic-core
     build-packages:
       - git
+      # include rustc and cargo to compile pydantic
+      - rustc
+      - cargo
+      # libffi-dev, libssl-dev, pkg-config for openssl
+      - libffi-dev
+      - libssl-dev
+      - pkg-config
     build-snaps: [astral-uv]
     override-build: |
       uv export --frozen --no-hashes --format=requirements-txt -o requirements.txt
