@@ -40,7 +40,7 @@ parts:
       # - libyaml-dev
       # - pkg-config
       - git
-    build-snaps:
+    build-snaps: 
       - astral-uv
       # - rustup
     override-build: |
