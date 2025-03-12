@@ -29,7 +29,7 @@ parts:
       # Install PyYAML from binary and avoid building it from sources. This way, we can use PyYAML with C-optimized lib.
       # With the C-optimized lib, serialization in ops is 20x faster.
       - PyYAML
-      - cryptography==44.0.1
+      - cryptography
       - jsonschema
       - pydantic
       - pydantic-core
