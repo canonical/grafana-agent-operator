@@ -160,6 +160,7 @@ class GrafanaAgentServiceError(GrafanaAgentError):
 class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     """Machine version of the Grafana Agent charm."""
 
+    sensitive_file_permissions = 0o600
     service_name = "grafana-agent.grafana-agent"
 
     mandatory_relation_pairs = {
@@ -392,16 +393,21 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         with open(filepath) as f:
             return f.read()
 
-    def write_file(self, path: Union[str, Path], text: str) -> None:
+    def write_file(self, path: Union[str, Path], text: str, sensitive: bool=True) -> None:
         """Write text to a file.
 
         Args:
             path: file path to write to
             text: text to write to the file
+            sensitive: whether the file contains sensitive data.
+                If True, will assign tighter permissions on creation.
         """
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
             f.write(text)
+
+        if sensitive:
+            os.chmod(str(path), self.sensitive_file_permissions)
 
     def delete_file(self, path: Union[str, Path]):
         """Delete a file.

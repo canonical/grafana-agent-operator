@@ -331,12 +331,14 @@ class GrafanaAgentCharm(CharmBase):
         """
         raise NotImplementedError("Please override the read_file method")
 
-    def write_file(self, path: Union[str, pathlib.Path], text: str) -> None:
+    def write_file(self, path: Union[str, pathlib.Path], text: str, sensitive: bool=True) -> None:
         """Write text to a file.
 
         Args:
             path: file path to write to
             text: text to write to the file
+            sensitive: whether the file contains sensitive data.
+                If True, will assign tighter permissions on creation.
         """
         raise NotImplementedError("Please override the write_file method")
 
