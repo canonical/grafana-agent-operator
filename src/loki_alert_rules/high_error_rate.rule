@@ -1,5 +1,5 @@
 alert: HostHighLogErrorRate
-expr: count_over_time({job="varlogs"} |= "error" [1h]) > 100
+expr: count_over_time({job="varlog"} |= "error" [1h]) > 100
 for: 0m
 labels:
   severity: warning
