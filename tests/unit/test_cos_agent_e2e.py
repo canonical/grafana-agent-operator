@@ -24,17 +24,6 @@ annotations:
   summary: Host CPU high iowait (instance {{ $labels.instance }})
   description: "CPU iowait > 10%. A high iowait means that you are disk or network bound.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 """
-LOKI_RULE = """groups:
-  - name: grafana-agent-high-log-volume
-    rules:
-      - alert: HighLogVolume
-        expr: |
-          count_over_time(({%%juju_topology%%})[30s]) > 100
-        labels:
-            severity: high
-        annotations:
-            summary: Log rate is too high!
-"""
 GRAFANA_DASH = """
 {
   "title": "foo",
