@@ -5,8 +5,6 @@ from itertools import combinations
 def status(juju_statuses):
     # One grafana agent subordinate per principal app or machine
     for status in juju_statuses.values():
-        if status is None:
-            continue
         _status_one_per_machine(status)
         _status_one_per_app(status)
 
@@ -14,8 +12,6 @@ def status(juju_statuses):
 def bundle(juju_bundles):
     # One grafana agent subordinate per principal app or machine
     for bundle in juju_bundles.values():
-        if bundle is None:
-            continue
         _bundle_one_per_machine(bundle)
         _bundle_one_per_app(bundle)
 
