@@ -58,6 +58,7 @@ requires:
   certificates:
     interface: tls-certificates
     limit: 1
+    optional: true
     description: |
       Certificate for the grafana agent server (API endpoint is served on :12345 by default)
       to use to authenticate to clients, and the CA certificate of the signing CA.
@@ -69,6 +70,7 @@ requires:
       this relation will be enough.
     interface: juju-info
     scope: container
+    optional: true
   cos-agent:
     description: |
       `cos-agent` is a dedicated relation for the grafana agent machine
@@ -76,25 +78,32 @@ requires:
       from arbitrary locations, send alert rules, dashboards, etc.
     interface: cos_agent
     scope: container
+    optional: true
 
   send-remote-write:
     interface: prometheus_remote_write
+    optional: true
   logging-consumer:
     interface: loki_push_api
+    optional: true
   grafana-cloud-config:
     interface: grafana_cloud_config
     limit: 1
+    optional: true
   receive-ca-cert:
     interface: certificate_transfer
+    optional: true
     description: |
       Obtain TLS information (certificate, ca, chain) from another charm.
   tracing:
     interface: tracing
     limit: 1
+    optional: true
 
 provides:
   grafana-dashboards-provider:
     interface: grafana_dashboard
+    optional: true
 
 peers:
   peers:
