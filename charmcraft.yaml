@@ -23,6 +23,9 @@ platforms:
   ubuntu@24.04:amd64:
   ubuntu@24.04:arm64:
 
+assumes:
+  - juju >= 3.6
+
 parts:
   charm:
     # Uncomment the commented out portions of this part to build from source.
