@@ -112,8 +112,13 @@ def test_metrics_alert_rule_labels(charm_config):
     )
 
     state_0 = ctx.run(ctx.on.relation_changed(relation=cos_agent_primary_relation), state)
-    state_1 = ctx.run(ctx.on.relation_changed(relation=cos_agent_subordinate_relation), state_0)
-    state_2 = ctx.run(ctx.on.relation_joined(relation=remote_write_relation), state_1)
+    state_1 = ctx.run(
+        ctx.on.relation_changed(relation=state_0.get_relation(cos_agent_subordinate_relation.id)),
+        state_0,
+    )
+    state_2 = ctx.run(
+        ctx.on.relation_joined(relation=state_1.get_relation(remote_write_relation.id)), state_1
+    )
 
     alert_rules = json.loads(
         state_2.get_relation(remote_write_relation.id).local_app_data["alert_rules"]

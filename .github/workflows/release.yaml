@@ -1,10 +1,11 @@
-name: Release Charm to Edge and Publish Libraries
+name: Release Charm
 
 on:
   workflow_dispatch: {}
   push:
     branches:
       - main
+      - track/**
 
 jobs:
   release:
@@ -12,3 +13,4 @@ jobs:
     secrets: inherit
     with:
       provider: machine
+      default-track: 2

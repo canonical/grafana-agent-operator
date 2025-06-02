@@ -114,9 +114,16 @@ def test_two_cos_agent_relations(charm_config):
         ],
         config=charm_config,
     )
-    out_state = ctx.run(ctx.on.relation_changed(relation=cos_agent_primary_relation), state)
+    out_state = ctx.run(
+        ctx.on.relation_changed(relation=state.get_relation(cos_agent_primary_relation.id)), state
+    )
 
-    with ctx(ctx.on.relation_changed(relation=cos_agent_subordinate_relation), out_state) as mgr:
+    with ctx(
+        ctx.on.relation_changed(
+            relation=out_state.get_relation(cos_agent_subordinate_relation.id)
+        ),
+        out_state,
+    ) as mgr:
         mgr.run()
 
         assert len(mgr.charm._cos.dashboards) == 2
