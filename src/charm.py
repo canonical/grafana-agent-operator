@@ -46,7 +46,7 @@ def key_value_pair_string_to_dict(key_value_pair: str) -> dict:
         elif "=" in pair:
             sep = "="
         else:
-            logger.error("Invalid pair without separator ':' o '=': '%s'", pair)
+            logger.error("Invalid pair without separator ':' or '=': '%s'", pair)
 
         key, value = map(str.strip, pair.split(sep, 1))
 
