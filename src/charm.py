@@ -11,7 +11,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union, get_args
+from typing import Any, Dict, List, Optional, Set, Union, cast, get_args
 
 import yaml
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, ReceiverProtocol
@@ -47,13 +47,16 @@ def key_value_pair_string_to_dict(key_value_pair: str) -> dict:
             sep = "="
         else:
             logger.error("Invalid pair without separator ':' or '=': '%s'", pair)
+            continue
 
         key, value = map(str.strip, pair.split(sep, 1))
 
         if not key:
             logger.error("Empty key in pair: '%s'", pair)
+            continue
         if not value:
             logger.error("Empty value in pair: '%s'", pair)
+            continue
 
         result[key] = value
 
@@ -370,7 +373,8 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """Return a list of metrics rules."""
         rules = self._cos.metrics_alerts
         topology = JujuTopology.from_charm(self)
-        extra_alert_labels = key_value_pair_string_to_dict(str(self.model.config.get("extra_alert_labels", "")))
+
+        extra_alert_labels = key_value_pair_string_to_dict(cast(str, self.model.config.get("extra_alert_labels", "")))
 
         # Get the rules defined by Grafana Agent itself.
         own_rules = AlertRules(query_type="promql", topology=topology)
