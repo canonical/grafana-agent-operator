@@ -11,7 +11,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union, get_args
+from typing import Any, Dict, List, Optional, Set, Union, cast, get_args
 
 import yaml
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, ReceiverProtocol
@@ -30,6 +30,45 @@ logger = logging.getLogger(__name__)
 _FsType = str
 _MountOption = str
 _MountOptions = List[_MountOption]
+
+
+def key_value_pair_string_to_dict(key_value_pair: str) -> dict:
+    """Transform a comma-separated key-value pairs into a dict."""
+    result = {}
+
+    for pair in key_value_pair.split(","):
+        pair = pair.strip()
+        if not pair:
+            continue
+
+        if ":" in pair:
+            sep = ":"
+        elif "=" in pair:
+            sep = "="
+        else:
+            logger.error("Invalid pair without separator ':' or '=': '%s'", pair)
+            continue
+
+        key, value = map(str.strip, pair.split(sep, 1))
+
+        if not key:
+            logger.error("Empty key in pair: '%s'", pair)
+            continue
+        if not value:
+            logger.error("Empty value in pair: '%s'", pair)
+            continue
+
+        result[key] = value
+
+    return result
+
+def inject_extra_labels_to_alert_rules(rules: dict, extra_alert_labels: dict) -> dict:
+    """Inject extra alert labels into alert labels."""
+    for _, item in rules.items():
+        for groups in item.get("groups", []):
+            for rule in groups.get("rules", []):
+                rule.setdefault("labels", {}).update(extra_alert_labels)
+    return rules
 
 
 @dataclass
@@ -333,8 +372,9 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
     def metrics_rules(self) -> Dict[str, Any]:
         """Return a list of metrics rules."""
         rules = self._cos.metrics_alerts
-
         topology = JujuTopology.from_charm(self)
+
+        extra_alert_labels = key_value_pair_string_to_dict(cast(str, self.model.config.get("extra_alert_labels", "")))
 
         # Get the rules defined by Grafana Agent itself.
         own_rules = AlertRules(query_type="promql", topology=topology)
@@ -343,6 +383,10 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             rules[topology.identifier]["groups"] += own_rules.as_dict()["groups"]
         else:
             rules[topology.identifier] = own_rules.as_dict()
+
+        if extra_alert_labels:
+            rules = inject_extra_labels_to_alert_rules(rules, extra_alert_labels)
+
 
         return rules
 
