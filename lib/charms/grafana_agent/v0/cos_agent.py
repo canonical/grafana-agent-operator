@@ -28,7 +28,7 @@ typically in the `__init__` method of your charm (the one which sends telemetry)
 ```python
     def __init__(
         self,
-        charm: CharmType,
+        charm: CharmBase,
         relation_name: str = DEFAULT_RELATION_NAME,
         metrics_endpoints: Optional[List[_MetricsEndpointDict]] = None,
         metrics_rules_dir: str = "./src/prometheus_alert_rules",
@@ -236,10 +236,10 @@ from typing import (
 import pydantic
 from cosl import DashboardPath40UID, JujuTopology, LZMABase64
 from cosl.rules import AlertRules, generic_alert_groups
+from ops import CharmBase
 from ops.charm import RelationChangedEvent
 from ops.framework import EventBase, EventSource, Object, ObjectEvents
 from ops.model import ModelError, Relation
-from ops.testing import CharmType
 
 if TYPE_CHECKING:
     try:
@@ -612,7 +612,7 @@ class COSAgentProvider(Object):
 
     def __init__(
         self,
-        charm: CharmType,
+        charm: CharmBase,
         relation_name: str = DEFAULT_RELATION_NAME,
         metrics_endpoints: Optional[List["_MetricsEndpointDict"]] = None,
         metrics_rules_dir: str = "./src/prometheus_alert_rules",
@@ -918,7 +918,7 @@ class COSAgentRequirer(Object):
 
     def __init__(
         self,
-        charm: CharmType,
+        charm: CharmBase,
         *,
         relation_name: str = DEFAULT_RELATION_NAME,
         peer_relation_name: str = DEFAULT_PEER_RELATION_NAME,
