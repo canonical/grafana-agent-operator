@@ -12,11 +12,9 @@ from juju.errors import JujuError
 from pytest_operator.plugin import OpsTest
 
 agent = SimpleNamespace(name="agent")
-# TODO after https://github.com/canonical/grafana-agent-operator/issues/162: Unpin hwo from revision 70
 hwo = SimpleNamespace(
     entity_url="hardware-observer",
     application_name="hwo",
-    revision=70,
     series="jammy",
     channel="stable",
 )
@@ -74,8 +72,8 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
         "grafana-cloud-integrator",
         application_name="gci",
         num_units=1,
-        series="focal",
-        channel="edge",
+        series="jammy",
+        channel="2/edge",
     )
 
     # grafana agent is in 'unknown' status until related, and grafana-cloud-integrator is in
