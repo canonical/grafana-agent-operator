@@ -12,11 +12,9 @@ from juju.errors import JujuError
 from pytest_operator.plugin import OpsTest
 
 agent = SimpleNamespace(name="agent")
-# TODO after https://github.com/canonical/grafana-agent-operator/issues/162: Unpin hwo from revision 70
 hwo = SimpleNamespace(
     entity_url="hardware-observer",
     application_name="hwo",
-    revision=70,
     series="jammy",
     channel="stable",
 )
