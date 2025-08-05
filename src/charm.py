@@ -63,6 +63,7 @@ def key_value_pair_string_to_dict(key_value_pair: str) -> dict:
 
     return result
 
+
 def inject_extra_labels_to_alert_rules(rules: dict, extra_alert_labels: dict) -> dict:
     """Return a copy of the rules dict with extra labels injected."""
     result = copy.deepcopy(rules)
@@ -208,7 +209,8 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             {"grafana-cloud-config"},  # or
             {"send-remote-write"},  # or
             {"logging-consumer"},  # or
-            {"grafana-dashboards-provider"},
+            {"grafana-dashboards-provider"},  # or
+            {"tracing"},
         ],
         "juju-info": [  # must be paired with:
             {"grafana-cloud-config"},  # or
@@ -376,7 +378,9 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         rules = self._cos.metrics_alerts
         topology = JujuTopology.from_charm(self)
 
-        extra_alert_labels = key_value_pair_string_to_dict(cast(str, self.model.config.get("extra_alert_labels", "")))
+        extra_alert_labels = key_value_pair_string_to_dict(
+            cast(str, self.model.config.get("extra_alert_labels", ""))
+        )
 
         # Get the rules defined by Grafana Agent itself.
         own_rules = AlertRules(query_type="promql", topology=topology)
@@ -388,7 +392,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
         if extra_alert_labels:
             rules = inject_extra_labels_to_alert_rules(rules, extra_alert_labels)
-
 
         return rules
 
