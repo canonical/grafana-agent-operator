@@ -74,7 +74,6 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
         "grafana-cloud-integrator",
         application_name="gci",
         num_units=1,
-        series="focal",
         channel="edge",
     )
 
