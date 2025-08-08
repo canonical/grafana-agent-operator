@@ -5,6 +5,7 @@ import logging
 from types import SimpleNamespace
 
 import pytest
+import sh
 from juju.errors import JujuError
 from pytest_operator.plugin import OpsTest
 
@@ -46,16 +47,10 @@ async def test_build_and_deploy(ops_test: OpsTest, grafana_agent_charm):
     )
 
     # Placeholder for o11y relations (otherwise grafana agent charm is in blocked status)
-    await ops_test.model.deploy(
-        "grafana-cloud-integrator",
-        application_name="gci",
-        num_units=1,
-        series="focal",
-        channel="edge",
-    )
+    sh.juju.deploy("grafana-cloud-integrator", "gci", model=ops_test.model.name, channel="1/edge")  # type: ignore
+    sh.juju.relate("agent:juju-info", principal.name, model=ops_test.model.name)  # type: ignore
+    sh.juju.relate("agent:grafana-cloud-config", "gci", model=ops_test.model.name)  # type: ignore
 
-    await ops_test.model.integrate("agent:juju-info", principal.name)
-    await ops_test.model.integrate("agent:grafana-cloud-config", "gci")
     await ops_test.model.wait_for_idle(
         apps=[principal.name, agent.name], status="active", timeout=1000
     )
