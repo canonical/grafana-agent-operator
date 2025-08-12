@@ -7,7 +7,7 @@ requires-python = "~=3.8"
 
 dependencies = [
   "cosl >= 0.0.50",
-  "ops > 2.5.0",
+  "ops > 2.5.0, < 3",
   "pydantic < 2",
   "requests",
   "cryptography", # Pin prevents an error in the wheels due to crypto package moving to openssl 3.2.1
