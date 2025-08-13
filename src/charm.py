@@ -5,14 +5,13 @@
 
 """A  juju charm for Grafana Agent on Kubernetes."""
 
-import copy
 import logging
 import os
 import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union, cast, get_args
+from typing import Any, Dict, List, Optional, Set, Union, get_args
 
 import yaml
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, ReceiverProtocol
@@ -27,7 +26,6 @@ from grafana_agent import (
     CONFIG_PATH,
     METRICS_RULES_SRC_PATH,
     GrafanaAgentCharm,
-    key_value_pair_string_to_dict,
 )
 from snap_management import SnapSpecError, install_ga_snap
 
