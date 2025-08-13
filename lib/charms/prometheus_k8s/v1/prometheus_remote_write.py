@@ -524,10 +524,9 @@ class PrometheusRemoteWriteConsumer(Object):
     def _inject_extra_labels_to_alert_rules(rules: Dict, extra_alert_labels: Dict) -> Dict:
         """Return a copy of the rules dict with extra labels injected."""
         result = copy.deepcopy(rules)
-        for item in result.values():
-            for group in item.get("groups", []):
-                for rule in group.get("rules", []):
-                    rule.setdefault("labels", {}).update(extra_alert_labels)
+        for group in result.get("groups", []):
+            for rule in group.get("rules", []):
+                rule.setdefault("labels", {}).update(extra_alert_labels)
         return result
 
     @property
