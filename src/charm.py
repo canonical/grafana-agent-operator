@@ -5,14 +5,13 @@
 
 """A  juju charm for Grafana Agent on Kubernetes."""
 
-import copy
 import logging
 import os
 import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union, cast, get_args
+from typing import Any, Dict, List, Optional, Set, Union, get_args
 
 import yaml
 from charms.grafana_agent.v0.cos_agent import COSAgentRequirer, ReceiverProtocol
@@ -23,7 +22,11 @@ from cosl.rules import AlertRules
 from ops import main
 from ops.model import BlockedStatus, MaintenanceStatus, Relation
 
-from grafana_agent import CONFIG_PATH, METRICS_RULES_SRC_PATH, GrafanaAgentCharm
+from grafana_agent import (
+    CONFIG_PATH,
+    METRICS_RULES_SRC_PATH,
+    GrafanaAgentCharm,
+)
 from snap_management import SnapSpecError, install_ga_snap
 
 logger = logging.getLogger(__name__)
@@ -31,47 +34,6 @@ logger = logging.getLogger(__name__)
 _FsType = str
 _MountOption = str
 _MountOptions = List[_MountOption]
-
-
-def key_value_pair_string_to_dict(key_value_pair: str) -> dict:
-    """Transform a comma-separated key-value pairs into a dict."""
-    result = {}
-
-    for pair in key_value_pair.split(","):
-        pair = pair.strip()
-        if not pair:
-            continue
-
-        if ":" in pair:
-            sep = ":"
-        elif "=" in pair:
-            sep = "="
-        else:
-            logger.error("Invalid pair without separator ':' or '=': '%s'", pair)
-            continue
-
-        key, value = map(str.strip, pair.split(sep, 1))
-
-        if not key:
-            logger.error("Empty key in pair: '%s'", pair)
-            continue
-        if not value:
-            logger.error("Empty value in pair: '%s'", pair)
-            continue
-
-        result[key] = value
-
-    return result
-
-
-def inject_extra_labels_to_alert_rules(rules: dict, extra_alert_labels: dict) -> dict:
-    """Return a copy of the rules dict with extra labels injected."""
-    result = copy.deepcopy(rules)
-    for item in result.values():
-        for group in item.get("groups", []):
-            for rule in group.get("rules", []):
-                rule.setdefault("labels", {}).update(extra_alert_labels)
-    return result
 
 
 @dataclass
@@ -378,10 +340,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         rules = self._cos.metrics_alerts
         topology = JujuTopology.from_charm(self)
 
-        extra_alert_labels = key_value_pair_string_to_dict(
-            cast(str, self.model.config.get("extra_alert_labels", ""))
-        )
-
         # Get the rules defined by Grafana Agent itself.
         own_rules = AlertRules(query_type="promql", topology=topology)
         own_rules.add_path(METRICS_RULES_SRC_PATH)
@@ -389,9 +347,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             rules[topology.identifier]["groups"] += own_rules.as_dict()["groups"]
         else:
             rules[topology.identifier] = own_rules.as_dict()
-
-        if extra_alert_labels:
-            rules = inject_extra_labels_to_alert_rules(rules, extra_alert_labels)
 
         return rules
 
