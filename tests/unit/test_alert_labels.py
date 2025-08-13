@@ -36,9 +36,7 @@ cos_agent_primary_data = {
                 "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAmCnsKICAidGl0bGUiOiAi"
                 "Zm9vIiwKICAiYmFyIiA6ICJiYXoiCn0KAACkcc0YFt15xAABPyd8KlLdH7bzfQEAAAAABFla"
             ],
-            "metrics_scrape_jobs": [
-                {"job_name": "primary_0", "path": "/metrics", "port": "8080"}
-            ],
+            "metrics_scrape_jobs": [{"job_name": "primary_0", "path": "/metrics", "port": "8080"}],
             "log_slots": ["foo:bar"],
         }
     )
@@ -139,7 +137,9 @@ def test_extra_alerts_config():
     # GIVEN a new key-value pair of extra alerts labels, for instance:
     # juju config agent extra_alerts_labels="environment: PRODUCTION, zone=Mars"
 
-    config1 = {"extra_alert_labels": "environment: PRODUCTION, zone=Mars",}
+    config1 = {
+        "extra_alert_labels": "environment: PRODUCTION, zone=Mars",
+    }
 
     # THEN The extra_alert_labels MUST be added to the alert rules.
     cos_agent_primary_relation = SubordinateRelation(
@@ -161,7 +161,7 @@ def test_extra_alerts_config():
             remote_write_relation,
             PeerRelation("peers"),
         ],
-        config=config1, # type: ignore
+        config=config1,  # type: ignore
     )
 
     state_0 = ctx.run(ctx.on.relation_changed(relation=cos_agent_primary_relation), state)
@@ -179,6 +179,7 @@ def test_extra_alerts_config():
 
     for group in alert_rules["groups"]:
         for rule in group["rules"]:
+            print(f"+++ Rule group: {rule}")
             assert rule["labels"]["environment"] == "PRODUCTION"
             assert rule["labels"]["zone"] == "Mars"
             if "grafana_agent_alertgroup_alerts" in group["name"]:
@@ -186,8 +187,6 @@ def test_extra_alerts_config():
                     rule["labels"]["juju_application"] == "primary"
                     or rule["labels"]["juju_application"] == "subordinate"
                 )
-
-
 
     # GIVEN the config option for extra alert labels is unset
     config2 = {}

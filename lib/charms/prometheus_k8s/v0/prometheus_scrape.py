@@ -362,7 +362,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 53
+LIBPATCH = 54
 
 # Version 0.0.53 needed for cosl.rules.generic_alert_groups
 PYDEPS = ["cosl>=0.0.53"]
@@ -1547,7 +1547,8 @@ class MetricsEndpointProvider(Object):
         if self._forward_alert_rules:
             alert_rules.add_path(self._alert_rules_path, recursive=True)
             alert_rules.add(
-                copy.deepcopy(generic_alert_groups.application_rules), group_name_prefix=self.topology.identifier
+                copy.deepcopy(generic_alert_groups.application_rules),
+                group_name_prefix=self.topology.identifier,
             )
         alert_rules_as_dict = alert_rules.as_dict()
 
