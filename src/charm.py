@@ -38,16 +38,6 @@ _MountOption = str
 _MountOptions = List[_MountOption]
 
 
-def inject_extra_labels_to_alert_rules(rules: dict, extra_alert_labels: dict) -> dict:
-    """Return a copy of the rules dict with extra labels injected."""
-    result = copy.deepcopy(rules)
-    for item in result.values():
-        for group in item.get("groups", []):
-            for rule in group.get("rules", []):
-                rule.setdefault("labels", {}).update(extra_alert_labels)
-    return result
-
-
 @dataclass
 class _SnapFstabEntry:
     """Representation of an individual fstab entry for snap plugs."""
@@ -352,10 +342,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         rules = self._cos.metrics_alerts
         topology = JujuTopology.from_charm(self)
 
-        extra_alert_labels = key_value_pair_string_to_dict(
-            cast(str, self.model.config.get("extra_alert_labels", ""))
-        )
-
         # Get the rules defined by Grafana Agent itself.
         own_rules = AlertRules(query_type="promql", topology=topology)
         own_rules.add_path(METRICS_RULES_SRC_PATH)
@@ -363,9 +349,6 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
             rules[topology.identifier]["groups"] += own_rules.as_dict()["groups"]
         else:
             rules[topology.identifier] = own_rules.as_dict()
-
-        if extra_alert_labels:
-            rules = inject_extra_labels_to_alert_rules(rules, extra_alert_labels)
 
         return rules
 
