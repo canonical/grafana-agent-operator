@@ -179,7 +179,6 @@ def test_extra_alerts_config():
 
     for group in alert_rules["groups"]:
         for rule in group["rules"]:
-            print(f"+++ Rule group: {rule}")
             assert rule["labels"]["environment"] == "PRODUCTION"
             assert rule["labels"]["zone"] == "Mars"
             if "grafana_agent_alertgroup_alerts" in group["name"]:
