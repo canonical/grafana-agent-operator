@@ -14,7 +14,8 @@ def placeholder_cfg_path(tmp_path):
 @pytest.fixture()
 def mock_config_path(placeholder_cfg_path):
     with patch("grafana_agent.CONFIG_PATH", placeholder_cfg_path):
-        yield
+        with patch("charm.CONFIG_PATH", placeholder_cfg_path):
+            yield
 
 
 @pytest.fixture(autouse=True)

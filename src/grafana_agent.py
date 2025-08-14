@@ -201,6 +201,7 @@ class GrafanaAgentCharm(CharmBase):
             alert_rules_path=self.loki_rules_paths.dest,
             forward_alert_rules=self._forward_alert_rules,
             refresh_event=[self.on.config_changed],
+            extra_alert_labels=extra_alert_labels,
         )
 
         self._grafana_dashboards_provider = GrafanaDashboardProvider(
@@ -446,6 +447,7 @@ class GrafanaAgentCharm(CharmBase):
         )
 
     def _update_loki_alerts(self):
+        print("Calling _update_loki_alerts RIGHT NOW")
         self.update_alerts_rules(
             alerts_func=self.logs_rules,
             reload_func=self._loki_consumer._reinitialize_alert_rules,
