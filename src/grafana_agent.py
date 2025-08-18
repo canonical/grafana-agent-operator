@@ -447,7 +447,6 @@ class GrafanaAgentCharm(CharmBase):
         )
 
     def _update_loki_alerts(self):
-        print("Calling _update_loki_alerts RIGHT NOW")
         self.update_alerts_rules(
             alerts_func=self.logs_rules,
             reload_func=self._loki_consumer._reinitialize_alert_rules,
