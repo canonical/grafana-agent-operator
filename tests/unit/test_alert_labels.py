@@ -244,9 +244,9 @@ def test_extra_alerts_config():
 
     for group in alert_rules["groups"]:
         for rule in group["rules"]:
+            assert rule["labels"].get("environment") is None
+            assert rule["labels"].get("zone") is None
             if "grafana_agent_alertgroup_alerts" in group["name"]:
-                assert rule["labels"].get("environment") is None
-                assert rule["labels"].get("zone") is None
                 assert (
                     rule["labels"]["juju_application"] == "primary"
                     or rule["labels"]["juju_application"] == "subordinate"
@@ -329,9 +329,9 @@ def test_extra_loki_alerts_config():
 
     for group in alert_rules["groups"]:
         for rule in group["rules"]:
+            assert rule["labels"].get("environment") is None
+            assert rule["labels"].get("zone") is None
             if "grafana_agent_alertgroup_alerts" in group["name"]:
-                assert rule["labels"].get("environment") is None
-                assert rule["labels"].get("zone") is None
                 assert (
                     rule["labels"]["juju_application"] == "primary"
                     or rule["labels"]["juju_application"] == "subordinate"
