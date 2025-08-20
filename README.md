@@ -12,8 +12,8 @@ logs, and trace data to the opinionated Grafana observability stack.
 The Grafana Agent Charmed Operator deploys Grafana Agent in machines using [Juju](https://juju.is)
 and the [Charmed Operator Lifecycle Manager (OLM)](https://juju.is/docs/olm).
 
-As a single entry point to the [Canonical Observability Stack](https://charmhub.io/cos-lite), the Grafana Agent charm
-brings several conveniences when deployed inside a monitored cluster:
+As a single entry point to the [Canonical Observability Stack](https://charmhub.io/cos-lite),
+the Grafana Agent charm brings several conveniences when deployed inside a monitored cluster:
 
 - Charms are related to the Grafana Agent charm, instead of to Prometheus and
   Loki individually. In typical deployments this would reduce the number of
