@@ -31,7 +31,25 @@ cos_agent_primary_data = {
                     }
                 ]
             },
-            "log_alert_rules": {},
+            "log_alert_rules": {
+                "groups": [
+                    {
+                        "name": "alertgroup",
+                        "rules": [
+                            {
+                                "alert": "Missing",
+                                "expr": "up == 0",
+                                "for": "0m",
+                                "labels": {
+                                    "juju_model": "machine",
+                                    "juju_model_uuid": "74a5690b-89c9-44dd-984b-f69f26a6b751",
+                                    "juju_application": "subordinate",
+                                },
+                            }
+                        ],
+                    }
+                ]
+            },
             "dashboards": [
                 "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAmCnsKICAidGl0bGUiOiAi"
                 "Zm9vIiwKICAiYmFyIiA6ICJiYXoiCn0KAACkcc0YFt15xAABPyd8KlLdH7bzfQEAAAAABFla"
@@ -65,7 +83,25 @@ cos_agent_subordinate_data = {
                     }
                 ]
             },
-            "log_alert_rules": {},
+            "log_alert_rules": {
+                "groups": [
+                    {
+                        "name": "alertgroup",
+                        "rules": [
+                            {
+                                "alert": "Missing",
+                                "expr": "up == 0",
+                                "for": "0m",
+                                "labels": {
+                                    "juju_model": "machine",
+                                    "juju_model_uuid": "74a5690b-89c9-44dd-984b-f69f26a6b751",
+                                    "juju_application": "subordinate",
+                                },
+                            }
+                        ],
+                    }
+                ]
+            },
             "dashboards": [
                 "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAmCnsKICAidGl0bGUiOiAi"
                 "Zm9vIiwKICAiYmFyIiA6ICJiYXoiCn0KAACkcc0YFt15xAABPyd8KlLdH7bzfQEAAAAABFla"
@@ -210,6 +246,94 @@ def test_extra_alerts_config():
             if "grafana_agent_alertgroup_alerts" in group["name"]:
                 assert rule["labels"].get("environment") is None
                 assert rule["labels"].get("zone") is None
+                assert (
+                    rule["labels"]["juju_application"] == "primary"
+                    or rule["labels"]["juju_application"] == "subordinate"
+                )
+
+
+def test_extra_loki_alerts_config():
+    # GIVEN a new key-value pair of extra alerts labels, for instance:
+    # juju config agent extra_alerts_labels="environment: PRODUCTION, zone=Mars"
+
+    config1 = {
+        "extra_alert_labels": "environment: PRODUCTION, zone=Mars",
+    }
+
+    # THEN The extra_alert_labels MUST be added to the alert rules.
+    cos_agent_primary_relation = SubordinateRelation(
+        "cos-agent", remote_app_name="primary", remote_unit_data=cos_agent_primary_data
+    )
+    cos_agent_subordinate_relation = SubordinateRelation(
+        "cos-agent", remote_app_name="subordinate", remote_unit_data=cos_agent_subordinate_data
+    )
+    send_loki_logs_relation = Relation("logging-consumer", remote_app_name="loki")
+
+    ctx = Context(
+        charm_type=charm.GrafanaAgentMachineCharm,
+    )
+    state = State(
+        leader=True,
+        relations=[
+            cos_agent_primary_relation,
+            cos_agent_subordinate_relation,
+            send_loki_logs_relation,
+            PeerRelation("peers"),
+        ],
+        config=config1,  # type: ignore
+    )
+
+    state_0 = ctx.run(ctx.on.relation_changed(relation=cos_agent_primary_relation), state)
+    state_1 = ctx.run(
+        ctx.on.relation_changed(relation=state_0.get_relation(cos_agent_subordinate_relation.id)),
+        state_0,
+    )
+
+    alert_rules = json.loads(
+        state_1.get_relation(send_loki_logs_relation.id).local_app_data["alert_rules"]
+    )
+
+    print("+++ ")
+    print(alert_rules)
+
+    for group in alert_rules["groups"]:
+        for rule in group["rules"]:
+            assert rule["labels"]["environment"] == "PRODUCTION"
+            assert rule["labels"]["zone"] == "Mars"
+            if "grafana_agent_alertgroup_alerts" in group["name"]:
+                assert (
+                    rule["labels"]["juju_application"] == "primary"
+                    or rule["labels"]["juju_application"] == "subordinate"
+                )
+
+    # GIVEN the config option for extra alert labels is unset
+    config2 = {}
+
+    # THEN the only labels present in the alert are the JujuTopology labels
+    new_state = State(
+        leader=True,
+        relations=[
+            cos_agent_primary_relation,
+            cos_agent_subordinate_relation,
+            send_loki_logs_relation,
+            PeerRelation("peers"),
+        ],
+        config=config2,
+    )
+    state_2 = ctx.run(ctx.on.relation_changed(relation=cos_agent_primary_relation), new_state)
+    state_3 = ctx.run(
+        ctx.on.relation_changed(relation=state_0.get_relation(cos_agent_subordinate_relation.id)),
+        state_2,
+    )
+    alert_rules = json.loads(
+        state_3.get_relation(send_loki_logs_relation.id).local_app_data["alert_rules"]
+    )
+
+    for group in alert_rules["groups"]:
+        for rule in group["rules"]:
+            assert rule["labels"].get("environment") is None
+            assert rule["labels"].get("zone") is None
+            if "grafana_agent_alertgroup_alerts" in group["name"]:
                 assert (
                     rule["labels"]["juju_application"] == "primary"
                     or rule["labels"]["juju_application"] == "subordinate"
