@@ -103,7 +103,7 @@ async def test_service(ops_test: OpsTest):
 @pytest.mark.abort_on_fail
 async def test_metrics(ops_test: OpsTest):
     # Wait the scrape interval to make sure all "state" keys turned from unknown to up (or down).
-    await asyncio.sleep(60)
+    await asyncio.sleep(90)
 
     unit_targets = await ssh_units(
         ops_test, principal.name, "curl localhost:12345/agent/api/v1/metrics/targets"
