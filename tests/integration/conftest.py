@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+import sh
 from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,6 @@ async def grafana_agent_charm(ops_test: OpsTest):
     if charm_file := os.environ.get("CHARM_PATH"):
         return Path(charm_file)
 
-    charm = await ops_test.build_charm(".")
+    sh.charmcraft.pack()  # type: ignore
     # Use the Jammy charm in integration tests
-    return Path("grafana-agent_ubuntu@22.04-amd64.charm").resolve() if charm else charm
+    return Path("grafana-agent_ubuntu@22.04-amd64.charm").resolve()
