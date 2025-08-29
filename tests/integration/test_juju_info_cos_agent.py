@@ -101,8 +101,9 @@ async def test_service(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-# https://github.com/canonical/grafana-agent-operator/issues/321
-@pytest.mark.xfail("The hardware-observer charm needs to fetch the new cos-agent library.")
+@pytest.mark.xfail(
+    reason="The hardware-observer charm needs to fetch the new cos-agent library."
+)  # https://github.com/canonical/grafana-agent-operator/issues/321
 async def test_metrics(ops_test: OpsTest):
     # Wait the scrape interval to make sure all "state" keys turned from unknown to up (or down).
     await asyncio.sleep(90)
