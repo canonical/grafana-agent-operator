@@ -41,7 +41,7 @@ def test_ca_cert_saved_to_disk():
         ],
         model=Model(uuid=str(model_uuid))
     )
-    
+
     # WHEN a relation is joined
     with patch(
         "charm.GrafanaAgentMachineCharm.write_file", new=mock_write
