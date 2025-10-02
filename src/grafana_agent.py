@@ -335,11 +335,13 @@ class GrafanaAgentCharm(CharmBase):
         self.run(["update-ca-certificates", "--fresh"])
 
     def _on_cert_transfer_removed(self, event: CertificateTransferRemovedEvent):
-        cert_filename = (
-            f"{self._ca_folder_path}/receive-ca-cert-{self.model.uuid}-{event.relation_id}-ca.crt"
-        )
-        self.delete_file(cert_filename)
-        self.run(["update-ca-certificates", "--fresh"])
+        certs_to_remove = [
+            filename
+            for filename in os.listdir(self._ca_folder_path)
+            if f"receive-ca-cert-{self.model.uuid}-{event.relation_id}" in filename
+        ]
+        for cert in certs_to_remove:
+            self.delete_file(cert)
 
     # Abstract Methods
     def _verify_snap_track(self) -> None:
