@@ -8,7 +8,7 @@ from charm import GrafanaAgentMachineCharm as GrafanaAgentCharm
 
 ctx = Context(GrafanaAgentCharm)
 
-def test_ca_cert_saved_to_disk():
+def test_ca_cert_deleted_from_disk():
     delete_path = ""
     def mock_delete(_, path):
         nonlocal delete_path
@@ -39,7 +39,7 @@ def test_ca_cert_saved_to_disk():
         model=Model(uuid=str(model_uuid))
     )
 
-    # WHEN a relation is joined
+    # WHEN a relation is broken
     cert_path = f"{ca_cert_path}/receive-ca-cert-{model_uuid}-{rel_id}-0-ca.crt"
     with patch(
         "charm.GrafanaAgentMachineCharm.delete_file", new=mock_delete
