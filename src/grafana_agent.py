@@ -333,6 +333,9 @@ class GrafanaAgentCharm(CharmBase):
             self.write_file(cert_filename, cert)
         self.run(["update-ca-certificates", "--fresh"])
 
+        # Restart the Agent with the new CA certs
+        self.restart()
+
     def _on_cert_transfer_removed(self, event: CertificateTransferRemovedEvent):
         cert_filename = (
             f"{self._ca_folder_path}/receive-ca-cert-{self.model.uuid}-{event.relation_id}-ca.crt"

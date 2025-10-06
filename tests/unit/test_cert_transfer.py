@@ -45,7 +45,7 @@ def test_ca_cert_saved_to_disk():
     # WHEN a relation is joined
     with patch(
         "charm.GrafanaAgentMachineCharm.write_file", new=mock_write
-    ):
+    ), patch("charm.GrafanaAgentMachineCharm.restart") as mock_restart:
         ctx.run(ctx.on.relation_changed(certificate_transfer_relation), state)
 
     # THEN the file must be written to disk with the correct name
@@ -55,3 +55,6 @@ def test_ca_cert_saved_to_disk():
     # AND the content of the file must be equal to the CA cert in relation data
     written_cert = yaml.safe_load(written_text)
     assert written_cert == fake_cert
+
+    # AND the snap must restart
+    mock_restart.assert_called()
