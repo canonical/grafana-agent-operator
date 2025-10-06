@@ -337,7 +337,7 @@ class GrafanaAgentCharm(CharmBase):
     def _on_cert_transfer_removed(self, event: CertificateTransferRemovedEvent):
         certs_to_remove = [
             filename
-            for filename in os.listdir(self._ca_folder_path)
+            for filename in self.list_files(self._ca_folder_path)
             if f"receive-ca-cert-{self.model.uuid}-{event.relation_id}" in filename
         ]
         for cert in certs_to_remove:
@@ -360,6 +360,14 @@ class GrafanaAgentCharm(CharmBase):
     def is_ready(self):
         """Checks if the charm is ready for configuration."""
         raise NotImplementedError("Please override the is_ready method")
+
+    def list_files(self, path: str):
+        """Get the list of all paths and dirs at path.
+
+        Returns:
+            List of paths of files and dirs at dir path
+        """
+        raise NotImplementedError("Please override the list_files method")
 
     def read_file(self, filepath: Union[str, pathlib.Path]):
         """Read a file's contents.
