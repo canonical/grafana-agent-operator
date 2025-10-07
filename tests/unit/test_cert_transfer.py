@@ -8,8 +8,6 @@ from ops.testing import Context, Model, Relation, State
 
 from charm import GrafanaAgentMachineCharm as GrafanaAgentCharm
 
-from ops.testing import Context, Model, Relation, State
-
 ctx = Context(GrafanaAgentCharm)
 
 def test_ca_cert_saved_to_disk():

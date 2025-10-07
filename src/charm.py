@@ -389,7 +389,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
 
     def list_files(self, path):
         """Return a list of files + dirs at a destination.
-        
+
         Returns:
             A list of strings with the path to the entries present at the passed path
         """
