@@ -387,6 +387,14 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         """
         return subprocess.run(["/bin/agent", "-version"], capture_output=True, text=True).stdout
 
+    def list_files(self, path):
+        """Return a list of files + dirs at a destination.
+
+        Returns:
+            A list of strings with the path to the entries present at the passed path
+        """
+        return [str(p) for p in Path(path).iterdir()]
+
     def read_file(self, filepath: Union[str, Path]):
         """Read a file's contents.
 
