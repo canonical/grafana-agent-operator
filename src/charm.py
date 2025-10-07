@@ -393,7 +393,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm):
         Returns:
             A list of strings with the path to the entries present at the passed path
         """
-        return os.listdir(path)
+        return [str(p) for p in Path(path).iterdir()]
 
     def read_file(self, filepath: Union[str, Path]):
         """Read a file's contents.

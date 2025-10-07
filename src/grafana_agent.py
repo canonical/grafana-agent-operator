@@ -342,6 +342,7 @@ class GrafanaAgentCharm(CharmBase):
             for filename in self.list_files(self._ca_folder_path)
             if f"receive-ca-cert-{self.model.uuid}-{event.relation_id}" in filename
         ]
+
         for cert in certs_to_remove:
             self.delete_file(cert)
 

@@ -95,7 +95,7 @@ def test_ca_cert_deleted_from_disk():
     with patch(
         "charm.GrafanaAgentMachineCharm.delete_file", new=mock_delete
     ), patch(
-        "os.listdir", return_value=[cert_path]
+        "charm.GrafanaAgentMachineCharm.list_files", return_value=[cert_path]
     ):
         ctx.run(ctx.on.relation_broken(certificate_transfer_relation), state)
 
