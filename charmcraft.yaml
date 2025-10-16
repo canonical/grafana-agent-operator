@@ -49,6 +49,19 @@ parts:
       # - libyaml-dev
       # - pkg-config
       - git
+
+      # There's no cryptography wheel for ppc64el, s390x, so need to build from source
+      - to ppc64el:
+        - libffi-dev
+        - libssl-dev
+        - libyaml-dev
+        - pkg-config
+      - to s390x:
+        - libffi-dev
+        - libssl-dev
+        - libyaml-dev
+        - pkg-config
+        
     build-snaps: 
       - astral-uv
       # - rustup
