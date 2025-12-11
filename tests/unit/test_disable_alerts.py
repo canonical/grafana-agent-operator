@@ -54,7 +54,7 @@ def test_forward_alert_rules(mock_config_path, forwarding):
     )
     with ctx(ctx.on.relation_changed(cos_agent_relation), state) as mgr:
         output_state = mgr.run()
-        # Sanity check: the alerts we defined above are in place
+        # Confidence check: the alerts we defined above are in place
         assert mgr.charm._cos.logs_alerts
         assert mgr.charm._cos.metrics_alerts
 
