@@ -49,68 +49,58 @@ def snap_is_installed():
         yield
 
 
-@pytest.fixture
-def provider_charm():
-    class MyPrincipal(CharmBase):
-        META = {
-            "name": PROVIDER_NAME,
-            "provides": {
-                "cos-agent": {"interface": "cos_agent", "scope": "container"},
-            },
-        }
-        _log_slots = ["charmed-kafka:logs"]
-
-        def __init__(self, framework: Framework):
-            super().__init__(framework)
-            self.gagent = COSAgentProvider(
-                self,
-                metrics_endpoints=[
-                    {"path": "/metrics", "port": 8080},
-                ],
-                metrics_rules_dir="./src/alert_rules/prometheus",
-                logs_rules_dir="./src/alert_rules/loki",
-                log_slots=self._log_slots,
-                refresh_events=[self.on.cos_agent_relation_changed],
-                tracing_protocols=["otlp_grpc", "otlp_http"],
-            )
-
-    return MyPrincipal
+PROVIDER_META = {
+    "name": PROVIDER_NAME,
+    "provides": {
+        "cos-agent": {"interface": "cos_agent", "scope": "container"},
+    },
+}
 
 
-@pytest.fixture
-def requirer_charm():
-    class MySubordinate(CharmBase):
-        META = {
-            "name": "mock-subordinate",
-            "requires": {
-                "cos-agent": {"interface": "cos_agent", "scope": "container"},
-            },
-            "peers": {"peers": {"interface": "grafana_agent_replica"}},
-        }
+class PrincipalProvider(CharmBase):
+    _log_slots = ["charmed-kafka:logs"]
 
-        def __init__(self, framework: Framework):
-            super().__init__(framework)
-            self.gagent = COSAgentRequirer(
-                self,
-                refresh_events=[self.on.cos_agent_relation_changed],
-            )
-            self.tracing = MagicMock()
-
-    return MySubordinate
+    def __init__(self, framework: Framework):
+        super().__init__(framework)
+        self.gagent = COSAgentProvider(
+            self,
+            metrics_endpoints=[
+                {"path": "/metrics", "port": 8080},
+            ],
+            metrics_rules_dir="./src/alert_rules/prometheus",
+            logs_rules_dir="./src/alert_rules/loki",
+            log_slots=self._log_slots,
+            refresh_events=[self.on.cos_agent_relation_changed],
+            tracing_protocols=["otlp_grpc", "otlp_http"],
+        )
 
 
-@pytest.fixture
-def provider_ctx(provider_charm):
-    return Context(charm_type=provider_charm, meta=provider_charm.META)
+class BadPrincipalProvider(PrincipalProvider):
+    _log_slots = 'charmed:oops-a-str-not-a-list'  # type: ignore
 
 
-@pytest.fixture
-def requirer_ctx(requirer_charm):
-    return Context(charm_type=requirer_charm, meta=requirer_charm.META)
+REQUIRER_META = {
+    "name": "mock-subordinate",
+    "requires": {
+        "cos-agent": {"interface": "cos_agent", "scope": "container"},
+    },
+    "peers": {"peers": {"interface": "grafana_agent_replica"}},
+}
 
 
-def test_cos_agent_injects_generic_alerts(provider_ctx):
+class SubordinateRequirer(CharmBase):
+    def __init__(self, framework: Framework):
+        super().__init__(framework)
+        self.gagent = COSAgentRequirer(
+            self,
+            refresh_events=[self.on.cos_agent_relation_changed],
+        )
+        self.tracing = MagicMock()
+
+
+def test_cos_agent_injects_generic_alerts():
     # GIVEN a cos-agent subordinate relation
+    provider_ctx = Context(charm_type=PrincipalProvider, meta=PROVIDER_META)
     cos_agent = SubordinateRelation("cos-agent")
 
     # WHEN the relation_changed event fires
@@ -128,7 +118,8 @@ def test_cos_agent_injects_generic_alerts(provider_ctx):
     )
 
 
-def test_cos_agent_changed_no_remote_data(provider_ctx):
+def test_cos_agent_changed_no_remote_data():
+    provider_ctx = Context(charm_type=PrincipalProvider, meta=PROVIDER_META)
     cos_agent = SubordinateRelation("cos-agent")
 
     state_out = provider_ctx.run(
@@ -155,8 +146,9 @@ def test_cos_agent_changed_no_remote_data(provider_ctx):
     assert len(config["tracing_protocols"]) == 2
 
 
-def test_subordinate_update(requirer_ctx):
+def test_subordinate_update():
     # step 2: gagent is notified that the principal has touched its relation data
+    requirer_ctx = Context(charm_type=SubordinateRequirer, meta=REQUIRER_META)
     peer = PeerRelation("peers")
     config = {
         "metrics_alert_rules": {},
@@ -202,11 +194,9 @@ def test_subordinate_update(requirer_ctx):
     assert "http://localhost:4318" in urls
 
 
-def test_cos_agent_wrong_rel_data(snap_is_installed, provider_ctx):
+def test_cos_agent_wrong_rel_data():
     # Step 1: principal charm is deployed and ends in "unknown" state
-    provider_ctx.charm_spec.charm_type._log_slots = (
-        "charmed:frogs"  # Set wrong type, must be a list
-    )
+    provider_ctx = Context(charm_type=BadPrincipalProvider, meta=PROVIDER_META)
     cos_agent_rel = SubordinateRelation("cos-agent")
     state = State(relations=[cos_agent_rel])
 
