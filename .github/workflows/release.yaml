@@ -9,8 +9,13 @@ on:
 
 jobs:
   release:
-    uses: canonical/observability/.github/workflows/charm-release.yaml@v1
-    secrets: inherit
+    # This charm needs to be packed for all archs, not just ARM and AMD.
+    # The main branch of the central CI repo is capable of remote building.
+    uses: canonical/observability/.github/workflows/charm-release.yaml@main
+    secrets:
+      LAUNCHPAD_TOKEN: ${{ secrets.LAUNCHPAD_TOKEN }}
+      CHARMHUB_TOKEN: ${{ secrets.CHARMHUB_TOKEN }}
     with:
       provider: machine
       default-track: dev
+      pack-using-remote-build: true
