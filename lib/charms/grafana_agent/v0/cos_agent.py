@@ -211,6 +211,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm)
 ```
 """
 
+import copy
 import enum
 import json
 import logging
@@ -737,7 +738,7 @@ class COSAgentProvider(Object):
         )
         alert_rules.add_path(self._metrics_rules, recursive=self._recursive)
         alert_rules.add(
-            generic_alert_groups.application_rules,
+            copy.deepcopy(generic_alert_groups.application_rules),
             group_name_prefix=JujuTopology.from_charm(self._charm).identifier,
         )
 
