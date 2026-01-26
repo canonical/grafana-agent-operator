@@ -712,11 +712,16 @@ class COSAgentProvider(Object):
             scrape_configs = self._scrape_configs.copy()
 
         # Convert "metrics_endpoints" to standard scrape_configs, and add them in
+        unit_name = self._charm.unit.name.replace("/", "_")
         for endpoint in self._metrics_endpoints:
+            port = endpoint["port"]
+            path = endpoint["path"]
+            sanitized_path = path.strip("/").replace("/", "_")
             scrape_configs.append(
                 {
-                    "metrics_path": endpoint["path"],
-                    "static_configs": [{"targets": [f"localhost:{endpoint['port']}"]}],
+                    "job_name": f"{unit_name}_localhost_{port}_{sanitized_path}"
+                    "metrics_path": path,
+                    "static_configs": [{"targets": [f"localhost:{port}"]}],
                 }
             )
 
