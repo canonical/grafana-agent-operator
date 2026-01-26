@@ -719,7 +719,7 @@ class COSAgentProvider(Object):
             sanitized_path = path.strip("/").replace("/", "_")
             scrape_configs.append(
                 {
-                    "job_name": f"{unit_name}_localhost_{port}_{sanitized_path}"
+                    "job_name": f"{unit_name}_localhost_{port}_{sanitized_path}",
                     "metrics_path": path,
                     "static_configs": [{"targets": [f"localhost:{port}"]}],
                 }
