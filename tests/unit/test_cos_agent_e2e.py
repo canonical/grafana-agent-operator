@@ -113,8 +113,12 @@ def test_cos_agent_injects_generic_alerts():
         state_out.get_relation(cos_agent.id).local_unit_data[CosAgentPeersUnitData.KEY]
     )
     # THEN the metrics_alert_rules groups should only contain the generic alert groups
+    # NOTE: that we cannot simply test equality with generic_alert_groups since
+    #       the name and labels are injected too
+    def names_and_exprs(rules):
+        return {(r["alert"], r["expr"]) for g in rules["groups"] for r in g["rules"]}
     assert (
-        config["metrics_alert_rules"]["groups"] == generic_alert_groups.application_rules["groups"]
+        names_and_exprs(config["metrics_alert_rules"]) == names_and_exprs(generic_alert_groups.application_rules)
     )
 
 
