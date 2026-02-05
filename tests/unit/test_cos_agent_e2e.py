@@ -118,6 +118,48 @@ def test_cos_agent_injects_generic_alerts():
     )
 
 
+@pytest.mark.parametrize("path,port,expected", [
+    ("/metrics", 8080, "localhost_8080_metrics"),
+    ("/metrics/", 8080, "localhost_8080_metrics"),
+    ("/sub/metrics", 8080, "localhost_8080_sub_metrics"),
+])
+def test_cos_agent_renders_job_name_for_metrics_endpoints(path, port, expected):
+    # GIVEN a principal charm specified some metrics endpoint (not scrape jobs)
+    class SomeProvider(CharmBase):
+
+        def __init__(self, framework: Framework):
+            super().__init__(framework)
+            self.gagent = COSAgentProvider(
+                self,
+                metrics_endpoints=[
+                    {"path": path, "port": port},
+                ],
+            )
+
+    # GIVEN a cos-agent subordinate relation
+    provider_ctx = Context(charm_type=SomeProvider, meta=PROVIDER_META)
+    cos_agent = SubordinateRelation("cos-agent")
+
+    # WHEN the relation_changed event fires
+    state_out = provider_ctx.run(
+        provider_ctx.on.relation_changed(relation=cos_agent, remote_unit=1),
+        State(relations=[cos_agent]),
+    )
+
+    config = json.loads(
+        state_out.get_relation(cos_agent.id).local_unit_data[CosAgentPeersUnitData.KEY]
+    )
+
+    # THEN a scrape job is rendered
+    assert len(config['metrics_scrape_jobs']) == 1
+
+    # AND the job name is rendered automatically from the paths and ports provided
+    job_dict = config['metrics_scrape_jobs'][0]
+    assert "job_name" in job_dict
+    # AND scrape spec is part of the job name
+    assert job_dict["job_name"].endswith(expected)
+
+
 def test_cos_agent_changed_no_remote_data():
     provider_ctx = Context(charm_type=PrincipalProvider, meta=PROVIDER_META)
     cos_agent = SubordinateRelation("cos-agent")
