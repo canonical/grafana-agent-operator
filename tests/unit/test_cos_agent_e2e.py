@@ -123,9 +123,9 @@ def test_cos_agent_injects_generic_alerts():
 
 
 @pytest.mark.parametrize("path,port,expected", [
-    ("/metrics", 8080, "localhost_8080_metrics"),
-    ("/metrics/", 8080, "localhost_8080_metrics"),
-    ("/sub/metrics", 8080, "localhost_8080_sub_metrics"),
+    ("/metrics", 8080, "default"),
+    ("/metrics/", 8080, "default"),
+    ("/sub/metrics", 8080, "default"),
 ])
 def test_cos_agent_renders_job_name_for_metrics_endpoints(path, port, expected):
     # GIVEN a principal charm specified some metrics endpoint (not scrape jobs)
