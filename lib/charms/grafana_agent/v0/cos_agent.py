@@ -213,6 +213,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm)
 
 import copy
 import enum
+import hashlib
 import json
 import logging
 import socket
@@ -255,7 +256,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 24
+LIBPATCH = 25
 
 PYDEPS = ["cosl >= 0.0.50", "pydantic"]
 
@@ -698,6 +699,30 @@ class COSAgentProvider(Object):
                 ) as e:
                     logger.error("Invalid relation data provided: %s", e)
 
+    def _deterministic_scrape_configs(self, scrape_configs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Get deterministic scrape_configs with stable job names.
+
+        For stability across serializations, compute a short per-config hash
+        and append it to the existing job name (or 'default'). Keep the app
+        name as a prefix: <app>_<job_or_default>_<8hex-hash>.
+
+        Hash the whole scrape_config (except any existing job_name) so the
+        suffix is sensitive to all stable fields. Use deterministic JSON
+        serialization.
+        """
+        local_scrape_configs = copy.deepcopy(scrape_configs)
+        processed: List[Dict[str, Any]] = []
+        for scrape_config in local_scrape_configs:
+            name = scrape_config.get("job_name", "default")
+            cfg_for_hash = {k: v for k, v in scrape_config.items() if k != "job_name"}
+            serialized = json.dumps(cfg_for_hash, sort_keys=True)
+            mini_hash = hashlib.sha256(serialized.encode()).hexdigest()[:8]
+
+            scrape_config["job_name"] = f"{self._charm.app.name}_{name}_{mini_hash}"
+            processed.append(scrape_config)
+
+        return sorted(processed, key=lambda c: c.get("job_name", ""))
+
     @property
     def _scrape_jobs(self) -> List[Dict]:
         """Return a list of scrape_configs.
@@ -721,14 +746,8 @@ class COSAgentProvider(Object):
             )
 
         scrape_configs = scrape_configs or []
-
-        # Augment job name to include the app name and a unique id (index)
-        for idx, scrape_config in enumerate(scrape_configs):
-            scrape_config["job_name"] = "_".join(
-                [self._charm.app.name, str(idx), scrape_config.get("job_name", "default")]
-            )
-
-        return scrape_configs
+        self.framework.breakpoint()
+        return self._deterministic_scrape_configs(scrape_configs)
 
     @property
     def _metrics_alert_rules(self) -> Dict:

@@ -124,29 +124,27 @@ def test_cos_agent_injects_generic_alerts():
     )
 
 
-@pytest.mark.parametrize(
-    "path,port,expected",
-    [
-        ("/metrics", 8080, "default"),
-        ("/metrics/", 8080, "default"),
-        ("/sub/metrics", 8080, "default"),
-    ],
-)
-def test_cos_agent_renders_job_name_for_metrics_endpoints(path, port, expected):
-    # GIVEN a principal charm specified some metrics endpoint (not scrape jobs)
+def test_cos_agent_renders_job_name_for_scrape_configs():
+    # GIVEN a principal charm specified some metrics endpoint and scrape jobs
     class SomeProvider(CharmBase):
         def __init__(self, framework: Framework):
             super().__init__(framework)
             self.gagent = COSAgentProvider(
                 self,
                 metrics_endpoints=[
-                    {"path": path, "port": port},
+                    {"path": "/metrics", "port": 8080},
                 ],
                 scrape_configs=[
                     {
                         "metrics_path": "/metrics",
                         "static_configs": [{"targets": ["foo:8008"]}],
                         "scheme": "http",
+                    },
+                    {
+                        "metrics_path": "/metrics",
+                        "static_configs": [{"targets": ["bar:8008"]}],
+                        "scheme": "http",
+                        "job_name": "bar-job",
                     }
                 ],
             )
@@ -166,26 +164,63 @@ def test_cos_agent_renders_job_name_for_metrics_endpoints(path, port, expected):
     )
 
     # THEN a scrape job is rendered
-    assert config["metrics_scrape_jobs"] == [
+    expected = [
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["bar:8008"]}],
+            "scheme": "http",
+            # AND the job name contains its existing job name with a hash of the config content
+            "job_name": "mock-principal_bar-job_cb75cb86",
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            # AND the job name contains a "default" job name with a hash of the config content
+            "job_name": "mock-principal_default_7ae03106",
+        },
         {
             "metrics_path": "/metrics",
             "static_configs": [{"targets": ["foo:8008"]}],
             "scheme": "http",
-            # AND the job name is rendered automatically
-            "job_name": "mock-principal_0_default",
+            # AND the job name contains a "default" job name with a hash of the config content
+            "job_name": "mock-principal_default_93c0e860",
+        },
+    ]
+    assert config["metrics_scrape_jobs"] == expected
+
+
+def test_cos_agent_deterministic_scrape_configs():
+    # GIVEN the current charm's name is "mock-principal"
+    # * COSAgentProvider's _deterministic_scrape_configs method
+    # * some scrape configs with and without job names, but all with the same content
+    dummy_self = MagicMock(**{"_charm.app.name": "mock-principal"})
+    test_method = COSAgentProvider._deterministic_scrape_configs
+    scrape_configs = [
+        {
+            "metrics_path": "/metrics",
+            "scheme": "http",
+            "static_configs": [{"targets": ["localhost:8080"]}],
         },
         {
-            "metrics_path": path,
-            "static_configs": [{"targets": [f"localhost:{port}"]}],
-            # AND the job name is rendered automatically
-            "job_name": "mock-principal_1_default",
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            "scheme": "http",
+            "job_name": "mock-principal_default",
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            "scheme": "http",
+            "job_name": "mock-principal_default_123ab456",
         },
     ]
 
-    for job in config["metrics_scrape_jobs"]:
-        assert "job_name" in job
-        # AND scrape spec is part of the job name
-        assert job["job_name"].endswith(expected)
+    # WHEN the method is called on a list of scrape configs
+    processed_cfgs = test_method(dummy_self, scrape_configs)
+    all_hashes = [cfg.get("job_name", "").split("_")[-1] for cfg in processed_cfgs]
+    # THEN all hashes are the same since the scrape_configs are the same
+    assert len(all_hashes) == 3
+    assert len(set(all_hashes)) == 1
 
 
 def test_cos_agent_changed_no_remote_data():
