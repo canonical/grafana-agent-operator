@@ -1040,40 +1040,10 @@ class GrafanaAgentCharm(CharmBase):
         Returns:
             a dict with Loki config
         """
-        endpoints = self._loki_endpoints_with_tls()
-
-        configs = []
+        configs: List[Dict[str, Any]] = []
         if self._loki_consumer.loki_endpoints or self._cloud.loki_ready:
-            configs.append(
-                {
-                    "name": "push_api_server",
-                    "clients": endpoints,
-                    "scrape_configs": [
-                        {
-                            "job_name": "loki",
-                            "loki_push_api": {
-                                "server": {
-                                    "http_listen_port": self._http_listen_port,
-                                    "grpc_listen_port": self._grpc_listen_port,
-                                },
-                            },
-                        }
-                    ],
-                }
-            )
+            configs = self._additional_log_configs
 
-        if self.cert.enabled:
-            for config in configs:
-                for scrape_config in config.get("scrape_configs", []):
-                    if scrape_config.get("loki_push_api"):
-                        scrape_config["loki_push_api"]["server"]["http_tls_config"] = (
-                            self.tls_config
-                        )
-                        scrape_config["loki_push_api"]["server"]["grpc_tls_config"] = (
-                            self.tls_config
-                        )
-
-        configs.extend(self._additional_log_configs)  # type: ignore
         return (
             {
                 "positions_directory": f"{self.positions_dir()}/grafana-agent-positions",
