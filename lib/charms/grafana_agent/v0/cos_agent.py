@@ -310,6 +310,13 @@ def _dedupe_list(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return unique_items
 
 
+def _dict_hash_except_key(scrape_config: Dict[str, Any], key: Optional[str]):
+    """Get a hash of the scrape_config dict, except for the specified key."""
+    cfg_for_hash = {k: v for k, v in scrape_config.items() if k != key}
+    serialized = json.dumps(cfg_for_hash, sort_keys=True)
+    return hashlib.blake2b(serialized.encode(), digest_size=4).hexdigest()
+
+
 class TracingError(Exception):
     """Base class for custom errors raised by tracing."""
 
@@ -699,7 +706,9 @@ class COSAgentProvider(Object):
                 ) as e:
                     logger.error("Invalid relation data provided: %s", e)
 
-    def _deterministic_scrape_configs(self, scrape_configs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _deterministic_scrape_configs(
+        self, scrape_configs: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """Get deterministic scrape_configs with stable job names.
 
         For stability across serializations, compute a short per-config hash
@@ -711,17 +720,12 @@ class COSAgentProvider(Object):
         serialization.
         """
         local_scrape_configs = copy.deepcopy(scrape_configs)
-        processed: List[Dict[str, Any]] = []
         for scrape_config in local_scrape_configs:
             name = scrape_config.get("job_name", "default")
-            cfg_for_hash = {k: v for k, v in scrape_config.items() if k != "job_name"}
-            serialized = json.dumps(cfg_for_hash, sort_keys=True)
-            mini_hash = hashlib.sha256(serialized.encode()).hexdigest()[:8]
+            short_id = _dict_hash_except_key(scrape_config, "job_name")
+            scrape_config["job_name"] = f"{self._charm.app.name}_{name}_{short_id}"
 
-            scrape_config["job_name"] = f"{self._charm.app.name}_{name}_{mini_hash}"
-            processed.append(scrape_config)
-
-        return sorted(processed, key=lambda c: c.get("job_name", ""))
+        return sorted(local_scrape_configs, key=lambda c: c.get("job_name", ""))
 
     @property
     def _scrape_jobs(self) -> List[Dict]:
@@ -746,7 +750,7 @@ class COSAgentProvider(Object):
             )
 
         scrape_configs = scrape_configs or []
-        self.framework.breakpoint()
+
         return self._deterministic_scrape_configs(scrape_configs)
 
     @property

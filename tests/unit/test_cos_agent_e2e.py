@@ -8,6 +8,7 @@ from charms.grafana_agent.v0.cos_agent import (
     CosAgentPeersUnitData,
     COSAgentProvider,
     COSAgentRequirer,
+    _dict_hash_except_key,
 )
 from cosl.rules import generic_alert_groups
 from ops.charm import CharmBase
@@ -170,20 +171,20 @@ def test_cos_agent_renders_job_name_for_scrape_configs():
             "static_configs": [{"targets": ["bar:8008"]}],
             "scheme": "http",
             # AND the job name contains its existing job name with a hash of the config content
-            "job_name": "mock-principal_bar-job_cb75cb86",
-        },
-        {
-            "metrics_path": "/metrics",
-            "static_configs": [{"targets": ["localhost:8080"]}],
-            # AND the job name contains a "default" job name with a hash of the config content
-            "job_name": "mock-principal_default_7ae03106",
+            "job_name": "mock-principal_bar-job_398ee272",
         },
         {
             "metrics_path": "/metrics",
             "static_configs": [{"targets": ["foo:8008"]}],
             "scheme": "http",
             # AND the job name contains a "default" job name with a hash of the config content
-            "job_name": "mock-principal_default_93c0e860",
+            "job_name": "mock-principal_default_2a6c2076",
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            # AND the job name contains a "default" job name with a hash of the config content
+            "job_name": "mock-principal_default_a15914a0",
         },
     ]
     assert config["metrics_scrape_jobs"] == expected
@@ -193,7 +194,7 @@ def test_cos_agent_deterministic_scrape_configs():
     # GIVEN the current charm's name is "mock-principal"
     # * COSAgentProvider's _deterministic_scrape_configs method
     # * some scrape configs with and without job names, but all with the same content
-    dummy_self = MagicMock(**{"_charm.app.name": "mock-principal"})
+    mocked_self = MagicMock(**{"_charm.app.name": "mock-principal"})
     test_method = COSAgentProvider._deterministic_scrape_configs
     scrape_configs = [
         {
@@ -216,8 +217,9 @@ def test_cos_agent_deterministic_scrape_configs():
     ]
 
     # WHEN the method is called on a list of scrape configs
-    processed_cfgs = test_method(dummy_self, scrape_configs)
-    all_hashes = [cfg.get("job_name", "").split("_")[-1] for cfg in processed_cfgs]
+    processed_cfgs = test_method(mocked_self, scrape_configs)
+    all_hashes = [_dict_hash_except_key(cfg, "job_name") for cfg in processed_cfgs]
+
     # THEN all hashes are the same since the scrape_configs are the same
     assert len(all_hashes) == 3
     assert len(set(all_hashes)) == 1
