@@ -8,6 +8,7 @@ from charms.grafana_agent.v0.cos_agent import (
     CosAgentPeersUnitData,
     COSAgentProvider,
     COSAgentRequirer,
+    _dict_hash_except_key,
 )
 from cosl.rules import generic_alert_groups
 from ops.charm import CharmBase
@@ -76,7 +77,7 @@ class PrincipalProvider(CharmBase):
 
 
 class BadPrincipalProvider(PrincipalProvider):
-    _log_slots = 'charmed:oops-a-str-not-a-list'  # type: ignore
+    _log_slots = "charmed:oops-a-str-not-a-list"  # type: ignore
 
 
 REQUIRER_META = {
@@ -112,27 +113,40 @@ def test_cos_agent_injects_generic_alerts():
     config = json.loads(
         state_out.get_relation(cos_agent.id).local_unit_data[CosAgentPeersUnitData.KEY]
     )
+
     # THEN the metrics_alert_rules groups should only contain the generic alert groups
-    assert (
-        config["metrics_alert_rules"]["groups"] == generic_alert_groups.application_rules["groups"]
+    # NOTE: that we cannot simply test equality with generic_alert_groups since
+    #       the name and labels are injected too
+    def names_and_exprs(rules):
+        return {(r["alert"], r["expr"]) for g in rules["groups"] for r in g["rules"]}
+
+    assert names_and_exprs(config["metrics_alert_rules"]) == names_and_exprs(
+        generic_alert_groups.application_rules
     )
 
 
-@pytest.mark.parametrize("path,port,expected", [
-    ("/metrics", 8080, "localhost_8080_metrics"),
-    ("/metrics/", 8080, "localhost_8080_metrics"),
-    ("/sub/metrics", 8080, "localhost_8080_sub_metrics"),
-])
-def test_cos_agent_renders_job_name_for_metrics_endpoints(path, port, expected):
-    # GIVEN a principal charm specified some metrics endpoint (not scrape jobs)
+def test_cos_agent_renders_job_name_for_scrape_configs():
+    # GIVEN a principal charm specified some metrics endpoint and scrape jobs
     class SomeProvider(CharmBase):
-
         def __init__(self, framework: Framework):
             super().__init__(framework)
             self.gagent = COSAgentProvider(
                 self,
                 metrics_endpoints=[
-                    {"path": path, "port": port},
+                    {"path": "/metrics", "port": 8080},
+                ],
+                scrape_configs=[
+                    {
+                        "metrics_path": "/metrics",
+                        "static_configs": [{"targets": ["foo:8008"]}],
+                        "scheme": "http",
+                    },
+                    {
+                        "metrics_path": "/metrics",
+                        "static_configs": [{"targets": ["bar:8008"]}],
+                        "scheme": "http",
+                        "job_name": "bar-job",
+                    }
                 ],
             )
 
@@ -151,13 +165,64 @@ def test_cos_agent_renders_job_name_for_metrics_endpoints(path, port, expected):
     )
 
     # THEN a scrape job is rendered
-    assert len(config['metrics_scrape_jobs']) == 1
+    expected = [
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["bar:8008"]}],
+            "scheme": "http",
+            # AND the job name contains its existing job name with a hash of the config content
+            "job_name": "mock-principal_bar-job_398ee272",
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["foo:8008"]}],
+            "scheme": "http",
+            # AND the job name contains a "default" job name with a hash of the config content
+            "job_name": "mock-principal_default_2a6c2076",
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            # AND the job name contains a "default" job name with a hash of the config content
+            "job_name": "mock-principal_default_a15914a0",
+        },
+    ]
+    assert config["metrics_scrape_jobs"] == expected
 
-    # AND the job name is rendered automatically from the paths and ports provided
-    job_dict = config['metrics_scrape_jobs'][0]
-    assert "job_name" in job_dict
-    # AND scrape spec is part of the job name
-    assert job_dict["job_name"].endswith(expected)
+
+def test_cos_agent_deterministic_scrape_configs():
+    # GIVEN the current charm's name is "mock-principal"
+    # * COSAgentProvider's _deterministic_scrape_configs method
+    # * some scrape configs with and without job names, but all with the same content
+    mocked_self = MagicMock(**{"_charm.app.name": "mock-principal"})
+    test_method = COSAgentProvider._deterministic_scrape_configs
+    scrape_configs = [
+        {
+            "metrics_path": "/metrics",
+            "scheme": "http",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            "scheme": "http",
+            "job_name": "mock-principal_default",
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            "scheme": "http",
+            "job_name": "mock-principal_default_123ab456",
+        },
+    ]
+
+    # WHEN the method is called on a list of scrape configs
+    processed_cfgs = test_method(mocked_self, scrape_configs)
+    all_hashes = [_dict_hash_except_key(cfg, "job_name") for cfg in processed_cfgs]
+
+    # THEN all hashes are the same since the scrape_configs are the same
+    assert len(all_hashes) == 3
+    assert len(set(all_hashes)) == 1
 
 
 def test_cos_agent_changed_no_remote_data():
