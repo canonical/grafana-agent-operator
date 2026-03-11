@@ -1,5 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 from unittest.mock import PropertyMock, patch
 
 import pytest
