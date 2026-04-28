@@ -11,7 +11,7 @@ jobs:
   release:
     # This charm needs to be packed for all archs, not just ARM and AMD.
     # The main branch of the central CI repo is capable of remote building.
-    uses: canonical/observability/.github/workflows/charm-release.yaml@main
+    uses: canonical/observability/.github/workflows/charm-release.yaml@v2
     secrets:
       LAUNCHPAD_TOKEN: ${{ secrets.LAUNCHPAD_TOKEN }}
       CHARMHUB_TOKEN: ${{ secrets.CHARMHUB_TOKEN }}
