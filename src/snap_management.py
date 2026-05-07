@@ -25,10 +25,14 @@ log = logging.getLogger(__name__)
 _grafana_agent_snap_name = "grafana-agent"
 _grafana_agent_snaps = {
     # (confinement, arch): revision
-    ("strict", "amd64"): 94,  # 0.40.4
-    ("strict", "arm64"): 96,  # 0.40.4
-    ("classic", "amd64"): 95,  # 0.40.4
-    ("classic", "arm64"): 97,  # 0.40.4
+    ("strict", "amd64"): 142,  # 0.44.6
+    ("strict", "arm64"): 141,  # 0.44.6
+    ("strict", "ppc64el"): 146,  # 0.44.6
+    ("strict", "s390x"): 145,  # 0.44.6
+    ("classic", "amd64"): 143,  # 0.44.6
+    ("classic", "arm64"): 140,  # 0.44.6
+    ("classic", "ppc64el"): 147,  # 0.44.6
+    ("classic", "s390x"): 144,  # 0.44.6
 }
 
 
@@ -98,5 +102,7 @@ def get_system_arch() -> str:
         arch = "amd64"
     elif arch in ["aarch64", "arm64", "armv8b", "armv8l"]:
         arch = "arm64"
+    elif arch in ["ppc64le"]:
+        arch = "ppc64el"
     # else: keep arch as is
     return arch

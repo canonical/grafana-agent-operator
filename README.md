@@ -4,6 +4,10 @@
 [![Release Charm to Edge and Publish Libraries](https://github.com/canonical/grafana-agent-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/grafana-agent-operator/actions/workflows/release.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 
+
+> [!WARNING]  
+> This charm reaches end of life by the end of 2026. Consider switching to [opentelemetry-collector](https://github.com/canonical/opentelemetry-collector-operator) for continued support.
+
 ## Description
 
 [Grafana Agent](https://github.com/grafana/agent) is a telemetry collector for sending metrics,

@@ -8,6 +8,7 @@ from charms.grafana_agent.v0.cos_agent import (
     CosAgentPeersUnitData,
     COSAgentProvider,
     COSAgentRequirer,
+    _dict_hash_except_key,
 )
 from cosl.rules import generic_alert_groups
 from ops.charm import CharmBase
@@ -49,68 +50,58 @@ def snap_is_installed():
         yield
 
 
-@pytest.fixture
-def provider_charm():
-    class MyPrincipal(CharmBase):
-        META = {
-            "name": PROVIDER_NAME,
-            "provides": {
-                "cos-agent": {"interface": "cos_agent", "scope": "container"},
-            },
-        }
-        _log_slots = ["charmed-kafka:logs"]
-
-        def __init__(self, framework: Framework):
-            super().__init__(framework)
-            self.gagent = COSAgentProvider(
-                self,
-                metrics_endpoints=[
-                    {"path": "/metrics", "port": 8080},
-                ],
-                metrics_rules_dir="./src/alert_rules/prometheus",
-                logs_rules_dir="./src/alert_rules/loki",
-                log_slots=self._log_slots,
-                refresh_events=[self.on.cos_agent_relation_changed],
-                tracing_protocols=["otlp_grpc", "otlp_http"],
-            )
-
-    return MyPrincipal
+PROVIDER_META = {
+    "name": PROVIDER_NAME,
+    "provides": {
+        "cos-agent": {"interface": "cos_agent", "scope": "container"},
+    },
+}
 
 
-@pytest.fixture
-def requirer_charm():
-    class MySubordinate(CharmBase):
-        META = {
-            "name": "mock-subordinate",
-            "requires": {
-                "cos-agent": {"interface": "cos_agent", "scope": "container"},
-            },
-            "peers": {"peers": {"interface": "grafana_agent_replica"}},
-        }
+class PrincipalProvider(CharmBase):
+    _log_slots = ["charmed-kafka:logs"]
 
-        def __init__(self, framework: Framework):
-            super().__init__(framework)
-            self.gagent = COSAgentRequirer(
-                self,
-                refresh_events=[self.on.cos_agent_relation_changed],
-            )
-            self.tracing = MagicMock()
-
-    return MySubordinate
+    def __init__(self, framework: Framework):
+        super().__init__(framework)
+        self.gagent = COSAgentProvider(
+            self,
+            metrics_endpoints=[
+                {"path": "/metrics", "port": 8080},
+            ],
+            metrics_rules_dir="./src/alert_rules/prometheus",
+            logs_rules_dir="./src/alert_rules/loki",
+            log_slots=self._log_slots,
+            refresh_events=[self.on.cos_agent_relation_changed],
+            tracing_protocols=["otlp_grpc", "otlp_http"],
+        )
 
 
-@pytest.fixture
-def provider_ctx(provider_charm):
-    return Context(charm_type=provider_charm, meta=provider_charm.META)
+class BadPrincipalProvider(PrincipalProvider):
+    _log_slots = "charmed:oops-a-str-not-a-list"  # type: ignore
 
 
-@pytest.fixture
-def requirer_ctx(requirer_charm):
-    return Context(charm_type=requirer_charm, meta=requirer_charm.META)
+REQUIRER_META = {
+    "name": "mock-subordinate",
+    "requires": {
+        "cos-agent": {"interface": "cos_agent", "scope": "container"},
+    },
+    "peers": {"peers": {"interface": "grafana_agent_replica"}},
+}
 
 
-def test_cos_agent_injects_generic_alerts(provider_ctx):
+class SubordinateRequirer(CharmBase):
+    def __init__(self, framework: Framework):
+        super().__init__(framework)
+        self.gagent = COSAgentRequirer(
+            self,
+            refresh_events=[self.on.cos_agent_relation_changed],
+        )
+        self.tracing = MagicMock()
+
+
+def test_cos_agent_injects_generic_alerts():
     # GIVEN a cos-agent subordinate relation
+    provider_ctx = Context(charm_type=PrincipalProvider, meta=PROVIDER_META)
     cos_agent = SubordinateRelation("cos-agent")
 
     # WHEN the relation_changed event fires
@@ -122,13 +113,120 @@ def test_cos_agent_injects_generic_alerts(provider_ctx):
     config = json.loads(
         state_out.get_relation(cos_agent.id).local_unit_data[CosAgentPeersUnitData.KEY]
     )
+
     # THEN the metrics_alert_rules groups should only contain the generic alert groups
-    assert (
-        config["metrics_alert_rules"]["groups"] == generic_alert_groups.application_rules["groups"]
+    # NOTE: that we cannot simply test equality with generic_alert_groups since
+    #       the name and labels are injected too
+    def names_and_exprs(rules):
+        return {(r["alert"], r["expr"]) for g in rules["groups"] for r in g["rules"]}
+
+    assert names_and_exprs(config["metrics_alert_rules"]) == names_and_exprs(
+        generic_alert_groups.application_rules
     )
 
 
-def test_cos_agent_changed_no_remote_data(provider_ctx):
+def test_cos_agent_renders_job_name_for_scrape_configs():
+    # GIVEN a principal charm specified some metrics endpoint and scrape jobs
+    class SomeProvider(CharmBase):
+        def __init__(self, framework: Framework):
+            super().__init__(framework)
+            self.gagent = COSAgentProvider(
+                self,
+                metrics_endpoints=[
+                    {"path": "/metrics", "port": 8080},
+                ],
+                scrape_configs=[
+                    {
+                        "metrics_path": "/metrics",
+                        "static_configs": [{"targets": ["foo:8008"]}],
+                        "scheme": "http",
+                    },
+                    {
+                        "metrics_path": "/metrics",
+                        "static_configs": [{"targets": ["bar:8008"]}],
+                        "scheme": "http",
+                        "job_name": "bar-job",
+                    }
+                ],
+            )
+
+    # GIVEN a cos-agent subordinate relation
+    provider_ctx = Context(charm_type=SomeProvider, meta=PROVIDER_META)
+    cos_agent = SubordinateRelation("cos-agent")
+
+    # WHEN the relation_changed event fires
+    state_out = provider_ctx.run(
+        provider_ctx.on.relation_changed(relation=cos_agent, remote_unit=1),
+        State(relations=[cos_agent]),
+    )
+
+    config = json.loads(
+        state_out.get_relation(cos_agent.id).local_unit_data[CosAgentPeersUnitData.KEY]
+    )
+
+    # THEN a scrape job is rendered
+    expected = [
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["bar:8008"]}],
+            "scheme": "http",
+            # AND the job name contains its existing job name with a hash of the config content
+            "job_name": "mock-principal_bar-job_398ee272",
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["foo:8008"]}],
+            "scheme": "http",
+            # AND the job name contains a "default" job name with a hash of the config content
+            "job_name": "mock-principal_default_2a6c2076",
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            # AND the job name contains a "default" job name with a hash of the config content
+            "job_name": "mock-principal_default_a15914a0",
+        },
+    ]
+    assert config["metrics_scrape_jobs"] == expected
+
+
+def test_cos_agent_deterministic_scrape_configs():
+    # GIVEN the current charm's name is "mock-principal"
+    # * COSAgentProvider's _deterministic_scrape_configs method
+    # * some scrape configs with and without job names, but all with the same content
+    mocked_self = MagicMock(**{"_charm.app.name": "mock-principal"})
+    test_method = COSAgentProvider._deterministic_scrape_configs
+    scrape_configs = [
+        {
+            "metrics_path": "/metrics",
+            "scheme": "http",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            "scheme": "http",
+            "job_name": "mock-principal_default",
+        },
+        {
+            "metrics_path": "/metrics",
+            "static_configs": [{"targets": ["localhost:8080"]}],
+            "scheme": "http",
+            "job_name": "mock-principal_default_123ab456",
+        },
+    ]
+
+    # WHEN the method is called on a list of scrape configs
+    processed_cfgs = test_method(mocked_self, scrape_configs)
+    all_hashes = [_dict_hash_except_key(cfg, "job_name") for cfg in processed_cfgs]
+
+    # THEN all hashes are the same since the scrape_configs are the same
+    assert len(all_hashes) == 3
+    assert len(set(all_hashes)) == 1
+
+
+def test_cos_agent_changed_no_remote_data():
+    provider_ctx = Context(charm_type=PrincipalProvider, meta=PROVIDER_META)
     cos_agent = SubordinateRelation("cos-agent")
 
     state_out = provider_ctx.run(
@@ -155,8 +253,9 @@ def test_cos_agent_changed_no_remote_data(provider_ctx):
     assert len(config["tracing_protocols"]) == 2
 
 
-def test_subordinate_update(requirer_ctx):
+def test_subordinate_update():
     # step 2: gagent is notified that the principal has touched its relation data
+    requirer_ctx = Context(charm_type=SubordinateRequirer, meta=REQUIRER_META)
     peer = PeerRelation("peers")
     config = {
         "metrics_alert_rules": {},
@@ -202,11 +301,9 @@ def test_subordinate_update(requirer_ctx):
     assert "http://localhost:4318" in urls
 
 
-def test_cos_agent_wrong_rel_data(snap_is_installed, provider_ctx):
+def test_cos_agent_wrong_rel_data():
     # Step 1: principal charm is deployed and ends in "unknown" state
-    provider_ctx.charm_spec.charm_type._log_slots = (
-        "charmed:frogs"  # Set wrong type, must be a list
-    )
+    provider_ctx = Context(charm_type=BadPrincipalProvider, meta=PROVIDER_META)
     cos_agent_rel = SubordinateRelation("cos-agent")
     state = State(relations=[cos_agent_rel])
 
