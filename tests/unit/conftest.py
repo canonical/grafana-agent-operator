@@ -1,7 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from unittest.mock import PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from charms.tempo_coordinator_k8s.v0.charm_tracing import charm_tracing_disabled
@@ -29,7 +29,7 @@ def mock_snap():
 @pytest.fixture(autouse=True)
 def mock_refresh():
     """Mock the refresh call so we don't access the host."""
-    with patch("snap_management._install_snap", new_callable=PropertyMock):
+    with patch("charm.install_ga_snap", new_callable=MagicMock):
         yield
 
 
