@@ -682,7 +682,7 @@ class GrafanaAgentCharm(CharmBase):
         """
         # Sort for a stable order across serializations: the upstream dedup goes through a set.
         prometheus_endpoints: List[Dict[str, Any]] = sorted(
-            wself._remote_write.endpoints,
+            self._remote_write.endpoints,
             key=lambda endpoint: str(endpoint.get("url", "")),
         )
 
