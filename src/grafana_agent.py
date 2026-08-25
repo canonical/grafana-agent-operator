@@ -680,7 +680,11 @@ class GrafanaAgentCharm(CharmBase):
         Also, injects the grafana-cloud-integrator endpoints into those we get from juju relations.
         FIXME: these should be separate concerns.
         """
-        prometheus_endpoints: List[Dict[str, Any]] = self._remote_write.endpoints
+        # Sort for a stable order across serializations: the upstream dedup goes through a set.
+        prometheus_endpoints: List[Dict[str, Any]] = sorted(
+            wself._remote_write.endpoints,
+            key=lambda endpoint: str(endpoint.get("url", "")),
+        )
 
         if self._cloud.prometheus_ready:
             prometheus_endpoint: Dict[str, Any] = {"url": self._cloud.prometheus_url}
@@ -698,7 +702,11 @@ class GrafanaAgentCharm(CharmBase):
         Also, injects the grafana-cloud-integrator endpoints into those we get from juju relations.
         FIXME: these should be separate concerns.
         """
-        loki_endpoints = self._loki_consumer.loki_endpoints
+        # Sort for a stable order across serializations: the source iterates over relation.units.
+        loki_endpoints = sorted(
+            self._loki_consumer.loki_endpoints,
+            key=lambda endpoint: str(endpoint.get("url", "")),
+        )
 
         if self._cloud.loki_ready:
             loki_endpoint = {

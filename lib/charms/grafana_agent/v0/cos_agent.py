@@ -256,7 +256,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 26
+LIBPATCH = 27
 
 PYDEPS = ["cosl >= 0.0.50", "pydantic"]
 
@@ -787,7 +787,7 @@ class COSAgentProvider(Object):
     def _dashboards(self) -> List[str]:
         dashboards: List[str] = []
         for d in self._dashboard_dirs:
-            for path in Path(d).glob("*"):
+            for path in sorted(Path(d).glob("*")):
                 with open(path, "rt") as fp:
                     dashboard = json.load(fp)
                 rel_path = str(
@@ -1111,7 +1111,8 @@ class COSAgentRequirer(Object):
                                 type=receiver_protocol_to_transport_protocol[protocol],
                             ),
                         )
-                        for protocol in self.requested_tracing_protocols()
+                        # Sort for a stable order across serializations: the source is a set.
+                        for protocol in sorted(self.requested_tracing_protocols())
                     ],
                 ).dump(relation.data[self._charm.unit])
 
