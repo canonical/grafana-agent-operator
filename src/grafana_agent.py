@@ -702,11 +702,7 @@ class GrafanaAgentCharm(CharmBase):
         Also, injects the grafana-cloud-integrator endpoints into those we get from juju relations.
         FIXME: these should be separate concerns.
         """
-        # Sort for a stable order across serializations: the source iterates over relation.units.
-        loki_endpoints = sorted(
-            self._loki_consumer.loki_endpoints,
-            key=lambda endpoint: str(endpoint.get("url", "")),
-        )
+        loki_endpoints = self._loki_consumer.loki_endpoints
 
         if self._cloud.loki_ready:
             loki_endpoint = {
