@@ -1252,7 +1252,10 @@ class COSAgentRequirer(Object):
                 peer_data.append(data)
                 app_names.add(app_name)
 
-        return peer_data
+        # Sort for a stable order across events: peer units are iterated as a set, so
+        # consumers aggregating this data (deduping by app name) would otherwise see
+        # varying orders.
+        return sorted(peer_data, key=lambda data: data.app_name)
 
     @property
     def metrics_alerts(self) -> Dict[str, Any]:
@@ -1422,7 +1425,11 @@ class COSAgentRequirer(Object):
                     }
                 )
 
-        return dashboards
+        # Sort for a stable order regardless of the order in which dashboards were stored.
+        return sorted(
+            dashboards,
+            key=lambda dashboard: (dashboard["title"], dashboard["charm"]),
+        )
 
 
 def charm_tracing_config(
