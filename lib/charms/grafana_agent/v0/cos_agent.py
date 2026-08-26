@@ -1428,7 +1428,7 @@ class COSAgentRequirer(Object):
         # Sort for a stable order regardless of the order in which dashboards were stored.
         return sorted(
             dashboards,
-            key=lambda dashboard: (dashboard["title"], dashboard["charm"]),
+            key=lambda dashboard: (dashboard["charm"], dashboard["title"]),
         )
 
 
