@@ -36,7 +36,7 @@ typically in the `__init__` method of your charm (the one which sends telemetry)
         recurse_rules_dirs: bool = False,
         log_slots: Optional[List[str]] = None,
         dashboard_dirs: Optional[List[str]] = None,
-        refresh_events: Optional[List] = None,
+        refresh_events: Optional[List[BoundEvent]] = None,
         tracing_protocols: Optional[List[str]] = None,
         scrape_configs: Optional[Union[List[Dict], Callable]] = None,
     ):
@@ -65,7 +65,8 @@ typically in the `__init__` method of your charm (the one which sends telemetry)
 
 - `dashboard_dirs`: List of directories where the dashboards are stored in the Charmed Operator.
 
-- `refresh_events`: List of events on which to refresh relation data.
+- `refresh_events`: List of `BoundEvent`s on which to refresh relation data (defaults to
+    `[charm.on.config_changed]`). For example `[charm.on.update_status, charm.on.upgrade_charm]`.
 
 - `tracing_protocols`: List of requested tracing protocols that the charm requires to send traces.
 
@@ -111,7 +112,7 @@ class TelemetryProviderCharm(CharmBase):
             recursive_rules_dir=True,
             log_slots=["my-app:slot"],
             dashboard_dirs=["./src/dashboards_1", "./src/dashboards_2"],
-            refresh_events=["update-status", "upgrade-charm"],
+            refresh_events=[self.on.update_status, self.on.upgrade_charm],
             tracing_protocols=["otlp_http", "otlp_grpc"],
             scrape_configs=[
                 {
@@ -176,7 +177,8 @@ and two optional arguments.
   `cos_agent` interface.
   The default value of this argument is "cos-agent".
 
-- `refresh_events`: List of events on which to refresh relation data.
+- `refresh_events`: List of `BoundEvent`s on which to refresh relation data (defaults to
+  `[charm.on.config_changed]`). For example `[charm.on.update_status, charm.on.upgrade_charm]`.
 
 
 ### Example 1 - Minimal instrumentation:
@@ -206,7 +208,7 @@ class GrafanaAgentMachineCharm(GrafanaAgentCharm)
         self._cos = COSAgentRequirer(
             self,
             relation_name="cos-agent-consumer",
-            refresh_events=["update-status", "upgrade-charm"],
+            refresh_events=[self.on.update_status, self.on.upgrade_charm],
         )
 ```
 """
@@ -239,7 +241,7 @@ import pydantic
 from cosl import DashboardPath40UID, JujuTopology, LZMABase64
 from cosl.rules import AlertRules, generic_alert_groups
 from ops.charm import RelationChangedEvent
-from ops.framework import EventBase, EventSource, Object, ObjectEvents
+from ops.framework import BoundEvent, EventBase, EventSource, Object, ObjectEvents
 from ops.model import ModelError, Relation
 from ops.testing import CharmType
 
@@ -256,7 +258,7 @@ if TYPE_CHECKING:
 
 LIBID = "dc15fa84cef84ce58155fb84f6c6213a"
 LIBAPI = 0
-LIBPATCH = 27
+LIBPATCH = 28
 
 PYDEPS = ["cosl >= 0.0.50", "pydantic"]
 
@@ -628,7 +630,7 @@ class COSAgentProvider(Object):
         recurse_rules_dirs: bool = False,
         log_slots: Optional[List[str]] = None,
         dashboard_dirs: Optional[List[str]] = None,
-        refresh_events: Optional[List] = None,
+        refresh_events: Optional[List[BoundEvent]] = None,
         tracing_protocols: Optional[List[str]] = None,
         *,
         scrape_configs: Optional[Union[List[dict], Callable[[], List[Dict[str, Any]]]]] = None,
@@ -648,7 +650,8 @@ class COSAgentProvider(Object):
             log_slots: Snap slots to connect to for scraping logs
                 in the form ["snap-name:slot", ...].
             dashboard_dirs: Directory where the dashboards are stored.
-            refresh_events: List of events on which to refresh relation data.
+            refresh_events: List of `BoundEvent`s (e.g. `[self.on.update_status]`) on which to
+                refresh relation data. Defaults to `[charm.on.config_changed]`.
             tracing_protocols: List of protocols that the charm will be using for sending traces.
             scrape_configs: List of standard scrape_configs dicts or a callable
                 that returns the list in case the configs need to be generated dynamically.
@@ -961,7 +964,7 @@ class COSAgentRequirer(Object):
         *,
         relation_name: str = DEFAULT_RELATION_NAME,
         peer_relation_name: str = DEFAULT_PEER_RELATION_NAME,
-        refresh_events: Optional[List[str]] = None,
+        refresh_events: Optional[List[BoundEvent]] = None,
         is_tracing_ready: Optional[Callable] = None,
     ):
         """Create a COSAgentRequirer instance.
@@ -970,7 +973,8 @@ class COSAgentRequirer(Object):
             charm: The `CharmBase` instance that is instantiating this object.
             relation_name: The name of the relation to communicate over.
             peer_relation_name: The name of the peer relation to communicate over.
-            refresh_events: List of events on which to refresh relation data.
+            refresh_events: List of `BoundEvent`s (e.g. `[self.on.update_status]`) on which to
+                refresh relation data. Defaults to `[charm.on.config_changed]`.
             is_tracing_ready: Custom function to evaluate whether the trace receiver url should be sent.
         """
         super().__init__(charm, relation_name)
